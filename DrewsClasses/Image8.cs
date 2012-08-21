@@ -1,0 +1,121 @@
+﻿////////
+//Written by Drew Robson (with modifications)
+///////
+
+
+using System;
+using System.Runtime.InteropServices;
+using ipp;
+
+namespace MHApi.DrewsClasses {
+
+    /// <summary>
+    /// Class to encapsulate an 8bit image in raw memory
+    /// </summary>
+    public unsafe class Image8 : IDisposable {
+        
+        /// <summary>
+        /// Pointer to the image in memory
+        /// </summary>
+        public byte* Image;
+        /// <summary>
+        /// Image Width
+        /// </summary>
+        public int Width
+        {
+            get
+            {
+                return Size.width;
+            }
+        }
+
+        /// <summary>
+        /// Image height
+        /// </summary>
+        public int Height
+        {
+            get
+            {
+                return Size.height;
+            }
+        }
+
+        /// <summary>
+        /// Image stride (memory layout)
+        /// </summary>
+        public int Stride;
+
+        /// <summary>
+        /// Pointer to a given pixel in the image buffer
+        /// </summary>
+        /// <param name="x">The x-coordinate of the pixel</param>
+        /// <param name="y">The y-coordinate of the pixel</param>
+        /// <returns>Pointer to the pixel in the buffer</returns>
+        public byte* this[int x, int y]
+        {
+            get
+            {
+                if (x >= Width || y >= Height)
+                {
+                    throw new IndexOutOfRangeException("The indexed point lies outside of the image");
+                }
+                return Image+x + y * Stride;
+            }
+        }
+
+        /// <summary>
+        /// Pointer to a given pixel in the image buffer
+        /// </summary>
+        /// <param name="point">The point referencing the pixel</param>
+        /// <returns>Pointer to the pixel in the buffer</returns>
+        public byte* this[IppiPoint point]
+        {
+            get
+            {
+                if (point.x >= Width || point.y >= Height)
+                {
+                    throw new IndexOutOfRangeException("The indexed point lies outside of the image");
+                }
+                return Image + point.x + point.y * Stride;
+            }
+        }
+
+        /// <summary>
+        /// Imagesize
+        /// </summary>
+        public IppiSize Size;
+        //float[] scalingBuffer;
+
+        public Image8(int width, int height) {
+            Stride = (int)(4 * Math.Ceiling(width / 4.0));
+            Size = new IppiSize(width, height);
+            Image = (byte*)Marshal.AllocHGlobal(Stride * height).ToPointer();
+        }
+
+        /*public void FromImage16(Image16 im, float cMax) {
+            if (im.Width != Width || im.Height != Height)
+                throw new NotImplementedException("Width and Height must match");
+            if (scalingBuffer == null || scalingBuffer.Length < im.Width * im.Height)
+                scalingBuffer = new float[im.Width * im.Height];
+            fixed (float* pScalingBuffer = scalingBuffer) {
+                ip.ippiConvert_16u32f_C1R(im.Image, im.Stride, pScalingBuffer, 4 * im.Width, im.Size);
+                ip.ippiScale_32f8u_C1R(pScalingBuffer, 4 * im.Width, Image, Stride, Size, 0, cMax);
+            }
+        }*/
+
+        #region IDisposable Members
+
+        bool isDisposed;
+        public void Dispose() {
+            if (isDisposed) return;
+            Marshal.FreeHGlobal((IntPtr)Image);
+            isDisposed = true;
+        }
+
+        ~Image8() {
+            Dispose();
+        }
+
+        #endregion
+    }
+}
