@@ -29,7 +29,7 @@ namespace MHApi.OpenGLSupport
             }
             //Check which provider we are dealing with, instantiate it and let it populate itself
             IOpenGLDrawingProvider retval;
-            switch (providerElements[1])
+            switch (providerElements[0])
             {
                 case "OneColor":
                     retval = new OneColorProvider();
