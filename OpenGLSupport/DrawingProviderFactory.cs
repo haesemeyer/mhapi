@@ -43,5 +43,41 @@ namespace MHApi.OpenGLSupport
                     throw new ApplicationException("Could not recognize drawing provider");
             }
         }
+
+        /// <summary>
+        /// Allows to copy arbitrary (but known to the factory) OpenGL drawing providers
+        /// Effectively implements generic copy constructor
+        /// </summary>
+        /// <param name="toCopy">The drawing provider we want to copy</param>
+        /// <returns>A new drawing provider with the same values as the current provider</returns>
+        public static IOpenGLDrawingProvider Copy(IOpenGLDrawingProvider toCopy)
+        {
+            if (toCopy == null)
+                return null;
+            else if (toCopy is OneColorProvider)
+            {
+                OneColorProvider tc = toCopy as OneColorProvider;
+                OneColorProvider retval = new OneColorProvider(tc.Color);
+                retval.RotationZ = tc.RotationZ;
+                retval.TranslationX = tc.TranslationX;
+                retval.TranslationY = tc.TranslationY;
+                return retval;
+            }
+            else if (toCopy is FourSquareProvider)
+            {
+                FourSquareProvider tc = toCopy as FourSquareProvider;
+                FourSquareProvider retval = new FourSquareProvider(tc.ColorSquare1, tc.ColorSquare2, tc.ColorSquare3, tc.ColorSquare4);
+                retval.RotationZ = tc.RotationZ;
+                retval.TranslationX = tc.TranslationX;
+                retval.TranslationY = tc.TranslationY;
+                return retval;
+            }
+            else
+            {
+                //we should never end up here
+                System.Diagnostics.Debug.Assert(false, "Tried to copy unkown provider");
+                return null;
+            }
+        }
     }
 }
