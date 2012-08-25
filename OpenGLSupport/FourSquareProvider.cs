@@ -128,6 +128,12 @@ namespace MHApi.OpenGLSupport
             b.Append(ColorSquare3.G);
             b.Append(";");
             b.Append(ColorSquare3.B);
+            b.Append(";");
+            b.Append(ColorSquare4.R);
+            b.Append(";");
+            b.Append(ColorSquare4.G);
+            b.Append(";");
+            b.Append(ColorSquare4.B);
             return b.ToString();
         }
 
@@ -157,11 +163,12 @@ namespace MHApi.OpenGLSupport
         public void FromFileString(string s)
         {
             string[] parts = s.Split(';');
-            if (parts.Length != 10 || parts[0] != "FourSquare")
+            if (parts.Length != 13 || parts[0] != "FourSquare")
                 throw new ApplicationException("Provided string does not represent a FourSquareProvider");
             ColorSquare1 = new FColor(float.Parse(parts[1]),float.Parse(parts[2]),float.Parse(parts[3]));
             ColorSquare2 = new FColor(float.Parse(parts[4]), float.Parse(parts[5]), float.Parse(parts[6]));
             ColorSquare3 = new FColor(float.Parse(parts[7]), float.Parse(parts[8]), float.Parse(parts[9]));
+            ColorSquare4 = new FColor(float.Parse(parts[10]), float.Parse(parts[11]), float.Parse(parts[12]));
         }
 
         #region Properties
