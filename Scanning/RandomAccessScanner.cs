@@ -46,28 +46,16 @@ namespace MHApi.Scanning
         PointVoltageConverter _pointVoltageConverter;
 
         /// <summary>
-        /// The analog out task handling the x-Mirror position
+        /// The analog out task handling
+        /// the mirror positions
         /// </summary>
-        //Task _xMirrorTask;
-
-        /// <summary>
-        /// The analog out task handling the y-Mirror position
-        /// </summary>
-        //Task _yMirrorTask;
-
         Task _mirrorTask;
 
         /// <summary>
-        /// The writer associated with the x-mirror task
+        /// The multichannel writer to control
+        /// mirror positions
         /// </summary>
-        //AnalogSingleChannelWriter _xWriter;
-
         AnalogMultiChannelWriter _multiWriter;
-
-        /// <summary>
-        /// The writer associated with the y-mirror task
-        /// </summary>
-        //AnalogSingleChannelWriter _yWriter;
 
         /// <summary>
         /// The minimum voltage
@@ -204,7 +192,7 @@ namespace MHApi.Scanning
                 _multiWriter.WriteSingleSample(true, voltages);
                 return HitStatus.NoConversion;
             }
-            return Hit(CoordinateConverter[coordinate]);          
+            return Hit(CoordinateConverter[coordinate]);             
         }
 
         /// <summary>
