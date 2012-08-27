@@ -35,5 +35,27 @@ namespace MHApi.Imaging
                     return new IppiPoint(original.y, size.width - original.x);
             }
         }
+
+        /// <summary>
+        /// Inverses a coordinate rotation within a given reference frame
+        /// </summary>
+        /// <param name="original">The rotated coordinate</param>
+        /// <param name="size">The dimensions of the reference frame</param>
+        /// <param name="rot">The original rotation</param>
+        /// <returns>The original point</returns>
+        public static IppiPoint RotateInverse(IppiPoint rotated, IppiSize size, Rotation rot)
+        {
+            switch (rot)
+            {
+                case Rotation.None:
+                    return rotated;
+                case Rotation.Clock90:
+                    return new IppiPoint(rotated.x, size.height-rotated.y);
+                case Rotation.Clock180:
+                    return new IppiPoint(size.width-rotated.x, size.height - rotated.y);
+                default:
+                    return new IppiPoint(size.width-rotated.y, rotated.x);
+            }
+        }
     }
 }
