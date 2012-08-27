@@ -138,12 +138,10 @@ namespace MHApi.Scanning
         /// <param name="p3">The third point and its corresponding voltage</param>
         public void Calibrate(PointVoltagePair p1, PointVoltagePair p2, PointVoltagePair p3)
         {
-            //distances from plane to mirror calculated for each point
-            double x1d, x2d, y1d, y2d;
+            
             //distance from the point in question to the first point
             double pointdist;
-            //mirror angles at each point
-            double alpha, beta, beta2;
+            
 
             //To build the lookup table we need the coordinates of the origin
             //to have a rectangular triangle reference
@@ -158,45 +156,6 @@ namespace MHApi.Scanning
 
             Calibrate(origin, p2, p3);
             return;
-
-            //calculate x-angles that correspond to the voltages
-            alpha = 4 * Math.PI * p1.XVoltage / 180;
-            beta = 4 * Math.PI * p2.XVoltage / 180;
-            beta2 = 4 * Math.PI * p3.XVoltage / 180;
-            //Calculate first distance measure for x-mirror
-            pointdist = p2.Coordinate.x - p1.Coordinate.x;
-            x1d = pointdist / (Math.Tan(alpha + beta) - Math.Tan(alpha));
-            //Calculate second distance measure for x-mirror
-            pointdist = p3.Coordinate.x - p1.Coordinate.x;
-            x2d = pointdist / (Math.Tan(alpha + beta2) - Math.Tan(alpha));
-            //calculate y-angles that correspond to the voltages
-            alpha = 4 * Math.PI * p1.YVoltage / 180;
-            beta = 4 * Math.PI * p2.YVoltage / 180;
-            beta2 = 4 * Math.PI * p3.YVoltage / 180;
-            //Calculate first distance measure for y-mirror
-            pointdist = p2.Coordinate.y - p1.Coordinate.y;
-            y1d = pointdist / (Math.Tan(alpha + beta) - Math.Tan(alpha));
-            //Calculate second distance measure for y-mirror
-            pointdist = p3.Coordinate.y - p1.Coordinate.y;
-            y2d = pointdist / (Math.Tan(alpha + beta2) - Math.Tan(alpha));
-            //Calculate distance for x-mirror
-            XDistance = (x1d + x2d) / 2;
-            //Calculate distance for y-mirror
-            YDistance = (y1d + y2d) / 2;
-            
-            System.Diagnostics.Debug.WriteLine(origin.x);
-            System.Diagnostics.Debug.WriteLine(origin.y);
-            //Create x-lookup table
-            for (int x = 0; x < _imageWidth; x++)
-            {
-                _xVolts[x] = (float)(Math.Atan((x - origin.x) / XDistance) * 45 / Math.PI);
-            }
-            //Create y-lookup table
-            for (int y = 0; y < _imageHeight; y++)
-            {
-                _yVolts[y] = (float)(Math.Atan((y - origin.y) / YDistance) * 45 / Math.PI);
-            }
-            Complete = true;
         }
 
         public override IppiPoint_32f this[IppiPoint p]

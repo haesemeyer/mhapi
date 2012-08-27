@@ -6,6 +6,8 @@ using System.IO;
 
 using ipp;
 
+using MHApi.Imaging;
+
 namespace MHApi.Scanning
 {
     /// <summary>
@@ -47,6 +49,12 @@ namespace MHApi.Scanning
         int _spacing;
 
         /// <summary>
+        /// The ROI stored in the table for scanning
+        /// </summary>
+        IppiROI _scanRoi;
+
+        /*
+        /// <summary>
         /// The width in pixels of the border excluded
         /// from the lookup table at all image borders
         /// </summary>
@@ -60,7 +68,7 @@ namespace MHApi.Scanning
         /// <summary>
         /// The height of the image contained in the lookup table
         /// </summary>
-        int _height;
+        int _height;*/
 
         /// <summary>
         /// The number of columns in the voltage table
@@ -87,6 +95,54 @@ namespace MHApi.Scanning
 
         #region Constructors
 
+        /// <summary>
+        /// Creates a new empty BLIScanLookupTable
+        /// </summary>
+        /// <param name="scanRoi">The image ROI in which to compute coordinates</param>
+        /// <param name="spacing">The spacing between the interpolation anchors stored in the table</param>
+        public BLIScanLookupTable(IppiROI scanRoi, int spacing=8)
+        {
+            //validate dimensions in relation to spacing
+            if (scanRoi.Width % spacing != 0)
+                throw new ArgumentException("The ROI width has to be dividable by the spacing");
+            if (scanRoi.Height % spacing != 0)
+                throw new ArgumentException("The ROI height has to be dividable by the spacing");
+            _spacing = spacing;
+            //initialize arrays
+            _c = (int)Math.Floor((float)scanRoi.Width / _spacing) + 1;
+            _r = (int)Math.Floor((float)scanRoi.Height / spacing) + 1;
+            _xVolts = new float[_c * _r];
+            _yVolts = new float[_c * _r];
+            _addIndex = -1;
+            _scanRoi = scanRoi;
+        }
+
+        /// <summary>
+        /// Creates a new BLIScanLookup Table which is prefilled
+        /// with previously obtained point-voltage relationships
+        /// </summary>
+        /// <param name="xVolts">The 2D table of x-Voltages</param>
+        /// <param name="yVolts">The 2D table of y-Voltages</param>
+        /// <param name="scanRoi">The image ROI of the coordinates</param>
+        /// <param name="spacing">The spacing between the interpolation anchors stored in the table</param>
+        public BLIScanLookupTable(float[] xVolts, float[] yVolts, IppiROI scanRoi, int spacing = 8)
+        {
+            if (xVolts.Length != yVolts.Length)
+                throw new ArgumentException("The two voltage lookup tables must have the same number of elements");
+            _c = (int)Math.Floor((float)scanRoi.Width / spacing) + 1;
+            _r = (int)Math.Floor((float)scanRoi.Height / spacing) + 1;
+            if (xVolts.Length != _c * _r)
+                throw new ArgumentException("The supplied voltage tables don't match with the image/border/spacing dimensions");
+            _spacing = spacing;
+            _xVolts = xVolts;
+            _yVolts = yVolts;
+            _complete = true;
+            _addIndex = _c * _r;
+            _scanRoi = scanRoi;
+        }
+
+
+        /*
         /// <summary>
         /// Creates a new empty BLIScanLookupTable
         /// </summary>
@@ -139,7 +195,7 @@ namespace MHApi.Scanning
             _yVolts = yVolts;
             _complete = true;
             _addIndex = _c * _r;
-        }
+        }*/
 
         #endregion
 
@@ -166,6 +222,7 @@ namespace MHApi.Scanning
         /// </summary>
         public bool Precomputed { get; private set; }
 
+        /*
         /// <summary>
         /// The width of the border within which we calibrated
         /// </summary>
@@ -176,7 +233,7 @@ namespace MHApi.Scanning
                 return _border;
             }
         }
-
+        */
         
 
         /// <summary>
@@ -194,20 +251,25 @@ namespace MHApi.Scanning
                     throw new InvalidOperationException("Tried to use non-complete calibration table");
                 }
                 IppiPoint_32f retval = new IppiPoint_32f();
-                if (p.x < _border || p.x > _width - _border)
+                if (p.x < _scanRoi.X || p.x >= (_scanRoi.Width + _scanRoi.X))
                     throw new ArgumentOutOfRangeException("X coordinate outside lookup table area");
-                if (p.y < _border || p.y > _height - _border)
+                if (p.y < _scanRoi.Y || p.y >= (_scanRoi.Height + _scanRoi.Y))
                     throw new ArgumentOutOfRangeException("Y coordinate outside lookup table area");
                 if (Precomputed)
                 {
-                    retval.x = _preCompX[p.y * _width + p.x];
-                    retval.y = _preCompY[p.y * _width + p.x];
+                    //our precomputed lookup table has a size equal to the ROI size
+                    //therefore we need to deduct the ROI start from the point
+                    //coordinates
+                    p.x = p.x - _scanRoi.X;
+                    p.y = p.y - _scanRoi.Y;
+                    retval.x = _preCompX[p.y * _scanRoi.Width + p.x];
+                    retval.y = _preCompY[p.y * _scanRoi.Width + p.x];
                     return retval;
                 }
                 int xIn, yIn;
                 //correct for the border presence
-                xIn = p.x - _border;
-                yIn = p.y - _border;
+                xIn = p.x - _scanRoi.X;
+                yIn = p.y - _scanRoi.Y;
                 //find table coordinates of the closest points with LOWER coordinates
                 //then the other borders will be +1 from that
                 int xTabLeft, yTabTop, xTabRight, yTabBottom;
@@ -278,7 +340,7 @@ namespace MHApi.Scanning
         /// <returns>Returns true if the point is covered by the calibration list</returns>
         public bool PointValid(IppiPoint p)
         {
-            return (p.x >= _border && p.x < (_width - _border) && p.y >= _border && p.y < (_height - _border));
+            return (p.x >= _scanRoi.X && p.x < (_scanRoi.X+_scanRoi.Width) && p.y >= _scanRoi.Y && p.y < (_scanRoi.Height+_scanRoi.Y));
         }
 
         /// <summary>
@@ -305,9 +367,9 @@ namespace MHApi.Scanning
                 _addIndex++;
                 //Compute next point
                 x = _addIndex % _c;
-                x = x * _spacing + _border;
+                x = x * _spacing + _scanRoi.X;
                 y = (_addIndex - _addIndex%_c) / _c;
-                y = y * _spacing + _border;
+                y = y * _spacing + _scanRoi.Y;
                 nextPoint = new IppiPoint(x, y);
                 return true;
             }
@@ -315,9 +377,9 @@ namespace MHApi.Scanning
             //Verify new point
             
             x = _addIndex % _c;
-            x = x * _spacing + _border;
+            x = x * _spacing + _scanRoi.X;
             y = (_addIndex - _addIndex % _c) / _c;
-            y = y * _spacing + _border;
+            y = y * _spacing + _scanRoi.Y;
             if (calibrationPoint.Coordinate.x != x || calibrationPoint.Coordinate.y != y)
                 throw new ArgumentException("Wrong calibration point provided");
 
@@ -336,9 +398,9 @@ namespace MHApi.Scanning
             {
                 //Compute next point
                 x = _addIndex % _c;
-                x = x * _spacing + _border;
+                x = x * _spacing + _scanRoi.X;
                 y = (_addIndex - _addIndex % _c) / _c;
-                y = y * _spacing + _border;
+                y = y * _spacing + _scanRoi.Y;
                 nextPoint = new IppiPoint(x, y);
                 return true;
             }
@@ -351,17 +413,17 @@ namespace MHApi.Scanning
             if (Precomputed)
                 return;
             //create new tables
-            _preCompX = new float[_width * _height];
-            _preCompY = new float[_width * _height];
+            _preCompX = new float[_scanRoi.Width * _scanRoi.Height];
+            _preCompY = new float[_scanRoi.Width * _scanRoi.Height];
             //iterate over each coordinate within the image borders
             //and precompute it's voltages, storing it in the table
-            for (int x = _border; x <= _width - _border; x++)
+            for (int x = 0; x < _scanRoi.Width; x++)
             {
-                for (int y = _border; y <= _height - _border; y++)
+                for (int y = 0; y < _scanRoi.Height; y++)
                 {
-                    IppiPoint_32f voltages = this[new IppiPoint(x, y)];
-                    _preCompX[y * _width + x] = voltages.x;
-                    _preCompY[y * _width + x] = voltages.y;
+                    IppiPoint_32f voltages = this[new IppiPoint(x+_scanRoi.X, y+_scanRoi.Y)];
+                    _preCompX[y * _scanRoi.Width + x] = voltages.x;
+                    _preCompY[y * _scanRoi.Width + x] = voltages.y;
                 }
             }
             Precomputed = true;
@@ -384,12 +446,14 @@ namespace MHApi.Scanning
             fileWriter.WriteLine("InterpolationLookupTable");
             fileWriter.WriteLine("Spacing");
             fileWriter.WriteLine(_spacing);
-            fileWriter.WriteLine("Border");
-            fileWriter.WriteLine(_border);
-            fileWriter.WriteLine("ImageWidth");
-            fileWriter.WriteLine(_width);
-            fileWriter.WriteLine("ImageHeight");
-            fileWriter.WriteLine(_height);
+            fileWriter.WriteLine("XStart");
+            fileWriter.WriteLine(_scanRoi.X);
+            fileWriter.WriteLine("YStart");
+            fileWriter.WriteLine(_scanRoi.Y);
+            fileWriter.WriteLine("ScanWidth");
+            fileWriter.WriteLine(_scanRoi.Width);
+            fileWriter.WriteLine("ScanHeight");
+            fileWriter.WriteLine(_scanRoi.Height);
             fileWriter.WriteLine("XVoltages");
             foreach (float v in _xVolts)
                 fileWriter.WriteLine(v);
@@ -408,22 +472,24 @@ namespace MHApi.Scanning
         {
             float[] xvolts;
             float[] yvolts;
-            int spacing, border, width, height;
+            int spacing, xStart, yStart, width, height;
             if (fileReader.ReadLine() != "InterpolationLookupTable")
                 throw new IOException("The provided file does not contain an interpolation lookup table or is corrupted");
             try
             {
                 fileReader.ReadLine();//"Spacing"
                 spacing = int.Parse(fileReader.ReadLine());
-                fileReader.ReadLine();//"Border"
-                border = int.Parse(fileReader.ReadLine());
-                fileReader.ReadLine();//"ImageWidth"
+                fileReader.ReadLine();//"XStart"
+                xStart = int.Parse(fileReader.ReadLine());
+                fileReader.ReadLine();//"YStart"
+                yStart = int.Parse(fileReader.ReadLine());
+                fileReader.ReadLine();//"ScanWidth"
                 width = int.Parse(fileReader.ReadLine());
-                fileReader.ReadLine();//"ImageHeight"
+                fileReader.ReadLine();//"ScanHeight"
                 height = int.Parse(fileReader.ReadLine());
                 fileReader.ReadLine();//"XVoltages"
-                int c = (int)Math.Floor((double)(width - 2 * border) / (double)spacing) + 1;
-                int r = (int)Math.Floor((double)(height - 2 * border) / (double)spacing) + 1;
+                int c = (int)Math.Floor((float)width / spacing) + 1;
+                int r = (int)Math.Floor((float)height / spacing) + 1;
                 xvolts = new float[c * r];
                 for (int i = 0; i < c * r; i++)
                 {
@@ -443,7 +509,7 @@ namespace MHApi.Scanning
                 System.Diagnostics.Debug.WriteLine(e);
                 throw new IOException("The provided file does not contain an interpolation lookup table or is corrupted");
             }
-            return new BLIScanLookupTable(xvolts, yvolts, width, height, spacing, border);
+            return new BLIScanLookupTable(xvolts, yvolts, new IppiROI(xStart, yStart, width, height), spacing);
         }
 
         #endregion
