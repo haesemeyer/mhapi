@@ -353,6 +353,30 @@ namespace MHApi.Scanning
         /// <exception cref="ArgumentExcpetion">Thrown if the wrong calibration point is provided</exception>
         public bool AddNext(PointVoltagePair calibrationPoint, out IppiPoint nextPoint)
         {
+            int x, y;
+            //Verify new point
+            if (_addIndex > -1 && _addIndex < _xVolts.Length)
+            {
+                x = _addIndex % _c;
+                x = x * _spacing + _scanRoi.X;
+                y = (_addIndex - _addIndex % _c) / _c;
+                y = y * _spacing + _scanRoi.Y;
+                if (calibrationPoint.Coordinate.x != x || calibrationPoint.Coordinate.y != y)
+                    throw new ArgumentException("Wrong calibration point provided");
+            }
+
+            return ForceAddNext(calibrationPoint, out nextPoint);
+        }
+
+        /// <summary>
+        /// Adds a new point to the calibration table without checking its validity. Returns
+        /// true until the table is complete and provides the next point to target
+        /// </summary>
+        /// <param name="calibrationPoint">The new calibration point to add to the table</param>
+        /// <param name="nextPoint">The point expected next in the calibration</param>
+        /// <returns>True until the table is complete</returns>
+        public bool ForceAddNext(PointVoltagePair calibrationPoint, out IppiPoint nextPoint)
+        {
             if (_addIndex >= _xVolts.Length)
             {
                 System.Diagnostics.Debug.WriteLine("Tried to add new point to already complete calibration table");
@@ -368,20 +392,13 @@ namespace MHApi.Scanning
                 //Compute next point
                 x = _addIndex % _c;
                 x = x * _spacing + _scanRoi.X;
-                y = (_addIndex - _addIndex%_c) / _c;
+                y = (_addIndex - _addIndex % _c) / _c;
                 y = y * _spacing + _scanRoi.Y;
                 nextPoint = new IppiPoint(x, y);
                 return true;
             }
 
-            //Verify new point
-            
-            x = _addIndex % _c;
-            x = x * _spacing + _scanRoi.X;
-            y = (_addIndex - _addIndex % _c) / _c;
-            y = y * _spacing + _scanRoi.Y;
-            if (calibrationPoint.Coordinate.x != x || calibrationPoint.Coordinate.y != y)
-                throw new ArgumentException("Wrong calibration point provided");
+
 
             //Add point to table
             _xVolts[_addIndex] = calibrationPoint.XVoltage;
