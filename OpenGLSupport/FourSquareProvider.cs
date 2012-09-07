@@ -86,9 +86,10 @@ namespace MHApi.OpenGLSupport
             gl.LoadIdentity();
             //Set up orthogonal (2D) projection
             //use coordinate system independent of the actual window size
+            //but constrained by the projectors aspect ratio!
             //with the origin in the middle (for rotation ease)
             //x pointing right, y pointing down
-            gl.Ortho2D(-10.0f, 10.0f, 10.0f, -10.0f);
+            gl.Ortho2D(-8.0f, 8.0f, 6.0f, -6.0f);
 
             //Load modelview
             gl.MatrixMode(MatrixMode.Modelview);
