@@ -37,12 +37,8 @@ namespace MHApi.OpenGLSupport
 
         public override void Draw(SharpGL.OpenGL gl)
         {
-            //move back to origin
-            gl.LoadIdentity();
-            //translate if necessary for alignment
-            gl.Translate(TranslationX, TranslationY, 0);
-            //Rotate if necessary for alignment
-            gl.Rotate(0, 0, RotationZ);
+            //Process alignment in baseclass
+            base.Draw(gl);
 
             //Draw the color "squares" on screen - make bigger than the viewport
             //so that alignment translation and rotation don't give edges

@@ -15,7 +15,15 @@ namespace MHApi.OpenGLSupport
     /// </summary>
     public abstract class TwoDProviderBase : IOpenGLDrawingProvider
     {
-        public abstract void Draw(OpenGL gl);
+        public virtual void Draw(OpenGL gl)
+        {
+            //move back to origin
+            gl.LoadIdentity();
+            //translate if necessary for alignment
+            gl.Translate(TranslationX, TranslationY, 0);
+            //Rotate if necessary for alignment
+            gl.Rotate(0, 0, RotationZ);
+        }
 
         public virtual void Resized(OpenGL gl)
         {

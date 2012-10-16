@@ -29,8 +29,8 @@ namespace MHApi.OpenGLSupport
 
         public override void Draw(SharpGL.OpenGL gl)
         {
-            //move back to origin
-            gl.LoadIdentity();
+            //Process alignment in baseclass
+            base.Draw(gl);
 
             //Draw the square on screen
             gl.Begin(OpenGL.GL_QUADS);
