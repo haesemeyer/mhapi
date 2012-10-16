@@ -7,7 +7,7 @@ using SharpGL.Enumerations;
 
 namespace MHApi.OpenGLSupport
 {
-    public class FourSquareProvider : IOpenGLDrawingProvider
+    public class FourSquareProvider : TwoDProviderBase
     {
         /// <summary>
         /// Default constructor
@@ -35,7 +35,7 @@ namespace MHApi.OpenGLSupport
             ColorSquare4 = square4;
         }
 
-        public void Draw(SharpGL.OpenGL gl)
+        public override void Draw(SharpGL.OpenGL gl)
         {
             //move back to origin
             gl.LoadIdentity();
@@ -79,35 +79,11 @@ namespace MHApi.OpenGLSupport
             gl.End();
         }
 
-        public void Resized(SharpGL.OpenGL gl)
-        {
-            gl.MatrixMode(MatrixMode.Projection);
-            //Load identity matrix
-            gl.LoadIdentity();
-            //Set up orthogonal (2D) projection
-            //use coordinate system independent of the actual window size
-            //but constrained by the projectors aspect ratio!
-            //with the origin in the middle (for rotation ease)
-            //x pointing right, y pointing down
-            gl.Ortho2D(-8.0f, 8.0f, 6.0f, -6.0f);
-
-            //Load modelview
-            gl.MatrixMode(MatrixMode.Modelview);
-        }
-
-        public void Initialize(SharpGL.OpenGL gl)
-        {           
-            //Disable depth testing since we only draw 2D
-            gl.Disable(OpenGL.GL_DEPTH_TEST);
-            //set the clear (=background) color - black
-            gl.ClearColor(0, 0, 0, 0);
-        }
-
         /// <summary>
         /// Converts the provider data to a savable filestring
         /// </summary>
         /// <returns>A string representation of the provider</returns>
-        public string ToFileString()
+        public override string ToFileString()
         {
             StringBuilder b = new StringBuilder();
             b.Append("FourSquare");
@@ -161,7 +137,7 @@ namespace MHApi.OpenGLSupport
         /// Populates a drawing provider from a string representation
         /// </summary>
         /// <param name="s">The string representation</param>
-        public void FromFileString(string s)
+        public override void FromFileString(string s)
         {
             string[] parts = s.Split(';');
             if (parts.Length != 13 || parts[0] != "FourSquare")
@@ -173,33 +149,6 @@ namespace MHApi.OpenGLSupport
         }
 
         #region Properties
-
-        /// <summary>
-        /// Translation in X-Direction
-        /// </summary>
-        public float TranslationX
-        {
-            get;
-            set;
-        }
-
-        /// <summary>
-        /// Translation in Y-Direction
-        /// </summary>
-        public float TranslationY
-        {
-            get;
-            set;
-        }
-
-        /// <summary>
-        /// Rotation around Z-Axis
-        /// </summary>
-        public float RotationZ
-        {
-            get;
-            set;
-        }
 
         /// <summary>
         /// The color of the first square (top left)
@@ -223,38 +172,5 @@ namespace MHApi.OpenGLSupport
 
         #endregion
 
-        #region NotSupported
-
-        /// <summary>
-        /// Not supported
-        /// </summary>
-        public float RotationY
-        {
-            get
-            {
-                throw new NotSupportedException();
-            }
-            set
-            {
-                throw new NotSupportedException();
-            }
-        }
-
-        /// <summary>
-        /// Not supported
-        /// </summary>
-        public float RotationX
-        {
-            get
-            {
-                throw new NotSupportedException();
-            }
-            set
-            {
-                throw new NotSupportedException();
-            }
-        }
-
-        #endregion
     }
 }
