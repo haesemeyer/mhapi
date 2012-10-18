@@ -98,6 +98,7 @@ namespace MHApi.OpenGLSupport
 
             for (float angle = 0; angle <= (float)(2*Math.PI); angle += angleStep)
             {
+                gl.Color(Color.R, Color.G, Color.B);
                 gl.Vertex(Center.x + Math.Sin(angle) * Radius, Center.y + Math.Cos(angle) * Radius);
             }
 
