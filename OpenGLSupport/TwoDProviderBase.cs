@@ -20,11 +20,13 @@ namespace MHApi.OpenGLSupport
             //move back to origin
             gl.LoadIdentity();
             //Rotate if necessary for alignment
-            gl.Rotate(0, 0, RotationZ);
+            gl.Rotate(0, 0, AlignmentRotationZ);
             //translate if necessary for alignment
-            gl.Translate(TranslationX, TranslationY, 0);
+            gl.Translate(AlignmentTranslationX, AlignmentTranslationY, 0);
             //NON ALIGNMENT based translation should occur next, followed by non-alignment based translation...
             //Need to break down into alignment rotation and image rotation...
+            gl.Translate(ImageTranslationX, ImageTranslationY, 0);
+            gl.Rotate(0, 0, ImageRotationZ);
         }
 
         public virtual void Resized(OpenGL gl)
@@ -51,19 +53,57 @@ namespace MHApi.OpenGLSupport
             gl.ClearColor(0, 0, 0, 0);
         }
 
-        public virtual float TranslationX
+        /// <summary>
+        /// The requested alignment translation in X-direction
+        /// </summary>
+        public virtual float AlignmentTranslationX
         {
             get;
             set;
         }
 
-        public virtual float TranslationY
+        /// <summary>
+        /// The requested translation of the
+        /// image in X-direction
+        /// </summary>
+        public virtual float ImageTranslationX
         {
             get;
             set;
         }
 
-        public virtual float RotationZ
+        /// <summary>
+        /// The requested alignment translation in Y-direction
+        /// </summary>
+        public virtual float AlignmentTranslationY
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
+        /// The requested translation of the
+        /// image in Y-direction
+        /// </summary>
+        public virtual float ImageTranslationY
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
+        /// The requested alignment rotation around Z
+        /// </summary>
+        public virtual float AlignmentRotationZ
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
+        /// The requested rotation of the image around Z
+        /// </summary>
+        public virtual float ImageRotationZ
         {
             get;
             set;
@@ -71,7 +111,7 @@ namespace MHApi.OpenGLSupport
 
         #region NotSupported
 
-        public float RotationY
+        public float AlignmentRotationY
         {
             get
             {
@@ -83,7 +123,31 @@ namespace MHApi.OpenGLSupport
             }
         }
 
-        public float RotationX
+        public float ImageRotationY
+        {
+            get
+            {
+                throw new NotImplementedException();
+            }
+            set
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        public float AlignmentRotationX
+        {
+            get
+            {
+                throw new NotImplementedException();
+            }
+            set
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        public float ImageRotationX
         {
             get
             {

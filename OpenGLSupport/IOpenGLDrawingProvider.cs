@@ -35,29 +35,56 @@ namespace MHApi.OpenGLSupport
         void Initialize(OpenGL gl);
 
         /// <summary>
-        /// The requested translation in X-direction
+        /// The requested alignment translation in X-direction
         /// </summary>
-        float TranslationX { get; set; }
+        float AlignmentTranslationX { get; set; }
 
         /// <summary>
-        /// The requested translation in Y-direction
+        /// The requested translation of the
+        /// image in X-direction
         /// </summary>
-        float TranslationY { get; set; }
+        float ImageTranslationX { get; set; }
 
         /// <summary>
-        /// The requested rotation around Z
+        /// The requested alignment translation in Y-direction
         /// </summary>
-        float RotationZ { get; set; }
+        float AlignmentTranslationY { get; set; }
 
         /// <summary>
-        /// The requested rotation around Y
+        /// The requested translation of the
+        /// image in Y-direction
         /// </summary>
-        float RotationY { get; set; }
+        float ImageTranslationY { get; set; }
 
         /// <summary>
-        /// The requested rotation around X
+        /// The requested alignment rotation around Z
         /// </summary>
-        float RotationX { get; set; }
+        float AlignmentRotationZ { get; set; }
+
+        /// <summary>
+        /// The requested rotation of the image around Z
+        /// </summary>
+        float ImageRotationZ { get; set; }
+
+        /// <summary>
+        /// The requested alignment rotation around Y
+        /// </summary>
+        float AlignmentRotationY { get; set; }
+
+        /// <summary>
+        /// The requested rotation of the image around Y
+        /// </summary>
+        float ImageRotationY { get; set; }
+
+        /// <summary>
+        /// The requested alignment rotation around X
+        /// </summary>
+        float AlignmentRotationX { get; set; }
+
+        /// <summary>
+        /// The requested rotation of the image around X
+        /// </summary>
+        float ImageRotationX { get; set; }
 
         /// <summary>
         /// Converts the provider data to a savable filestring
