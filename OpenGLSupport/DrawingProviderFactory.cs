@@ -58,18 +58,36 @@ namespace MHApi.OpenGLSupport
             {
                 OneColorProvider tc = toCopy as OneColorProvider;
                 OneColorProvider retval = new OneColorProvider(tc.Color);
-                retval.RotationZ = tc.RotationZ;
-                retval.TranslationX = tc.TranslationX;
-                retval.TranslationY = tc.TranslationY;
+                retval.AlignmentRotationZ = tc.AlignmentRotationZ;
+                retval.AlignmentTranslationX = tc.AlignmentTranslationX;
+                retval.AlignmentTranslationY = tc.AlignmentTranslationY;
+                retval.ImageRotationZ = tc.ImageRotationZ;
+                retval.ImageTranslationX = tc.ImageTranslationX;
+                retval.ImageTranslationY = tc.ImageTranslationY;
                 return retval;
             }
             else if (toCopy is FourSquareProvider)
             {
                 FourSquareProvider tc = toCopy as FourSquareProvider;
                 FourSquareProvider retval = new FourSquareProvider(tc.ColorSquare1, tc.ColorSquare2, tc.ColorSquare3, tc.ColorSquare4);
-                retval.RotationZ = tc.RotationZ;
-                retval.TranslationX = tc.TranslationX;
-                retval.TranslationY = tc.TranslationY;
+                retval.AlignmentRotationZ = tc.AlignmentRotationZ;
+                retval.AlignmentTranslationX = tc.AlignmentTranslationX;
+                retval.AlignmentTranslationY = tc.AlignmentTranslationY;
+                retval.ImageRotationZ = tc.ImageRotationZ;
+                retval.ImageTranslationX = tc.ImageTranslationX;
+                retval.ImageTranslationY = tc.ImageTranslationY;
+                return retval;
+            }
+            else if (toCopy is CircleProvider)
+            {
+                CircleProvider tc = toCopy as CircleProvider;
+                CircleProvider retval = new CircleProvider(tc.Color, tc.Center, tc.Radius, tc.SegmentCount);
+                retval.AlignmentRotationZ = tc.AlignmentRotationZ;
+                retval.AlignmentTranslationX = tc.AlignmentTranslationX;
+                retval.AlignmentTranslationY = tc.AlignmentTranslationY;
+                retval.ImageRotationZ = tc.ImageRotationZ;
+                retval.ImageTranslationX = tc.ImageTranslationX;
+                retval.ImageTranslationY = tc.ImageTranslationY;
                 return retval;
             }
             else
