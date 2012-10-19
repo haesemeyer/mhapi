@@ -19,10 +19,12 @@ namespace MHApi.OpenGLSupport
         {
             //move back to origin
             gl.LoadIdentity();
-            //translate if necessary for alignment
-            gl.Translate(TranslationX, TranslationY, 0);
             //Rotate if necessary for alignment
             gl.Rotate(0, 0, RotationZ);
+            //translate if necessary for alignment
+            gl.Translate(TranslationX, TranslationY, 0);
+            //NON ALIGNMENT based translation should occur next, followed by non-alignment based translation...
+            //Need to break down into alignment rotation and image rotation...
         }
 
         public virtual void Resized(OpenGL gl)
