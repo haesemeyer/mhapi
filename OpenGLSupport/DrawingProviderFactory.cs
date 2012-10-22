@@ -39,6 +39,10 @@ namespace MHApi.OpenGLSupport
                     retval = new FourSquareProvider();
                     retval.FromFileString(providerFileString);
                     return retval;
+                case "Circle":
+                    retval = new CircleProvider();
+                    retval.FromFileString(providerFileString);
+                    return retval;
                 default:
                     throw new ApplicationException("Could not recognize drawing provider");
             }
