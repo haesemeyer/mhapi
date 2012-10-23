@@ -43,6 +43,10 @@ namespace MHApi.OpenGLSupport
                     retval = new CircleProvider();
                     retval.FromFileString(providerFileString);
                     return retval;
+                case "LinGrad":
+                    retval = new LinGradientProvider();
+                    retval.FromFileString(providerFileString);
+                    return retval;
                 default:
                     throw new ApplicationException("Could not recognize drawing provider");
             }
@@ -86,6 +90,18 @@ namespace MHApi.OpenGLSupport
             {
                 CircleProvider tc = toCopy as CircleProvider;
                 CircleProvider retval = new CircleProvider(tc.Color, tc.Center, tc.Radius, tc.SegmentCount);
+                retval.AlignmentRotationZ = tc.AlignmentRotationZ;
+                retval.AlignmentTranslationX = tc.AlignmentTranslationX;
+                retval.AlignmentTranslationY = tc.AlignmentTranslationY;
+                retval.ImageRotationZ = tc.ImageRotationZ;
+                retval.ImageTranslationX = tc.ImageTranslationX;
+                retval.ImageTranslationY = tc.ImageTranslationY;
+                return retval;
+            }
+            else if (toCopy is LinGradientProvider)
+            {
+                LinGradientProvider tc = toCopy as LinGradientProvider;
+                LinGradientProvider retval = new LinGradientProvider(tc.Topleft, tc.Width, tc.Height, tc.ColStart, tc.ColEnd);
                 retval.AlignmentRotationZ = tc.AlignmentRotationZ;
                 retval.AlignmentTranslationX = tc.AlignmentTranslationX;
                 retval.AlignmentTranslationY = tc.AlignmentTranslationY;
