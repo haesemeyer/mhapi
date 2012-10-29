@@ -37,18 +37,18 @@ namespace MHApi.Imaging
             Size = new IppiSize(Width,Height);
             Stride = (int)(4 * Math.Ceiling(Width * 2 / 4.0));
             Image = (ushort*)Marshal.AllocHGlobal(Stride * Height).ToPointer();
-            //convert and copy image
-            IppHelper.IppCheckCall(ip.ippiConvert_8u16u_C1R(im.Image, im.Stride, Image, Stride, Size));
+            //scale, convert and copy image
+            IppHelper.IppCheckCall(ip.ippiScale_8u16u_C1R(im.Image, im.Stride, Image, Stride, Size));
         }
 
         /// <summary>
-        /// Reduce image to 8bit representation
+        /// Scale image to 8bit representation avoiding clipping
         /// </summary>
         /// <param name="im"></param>
         public void ReduceTo8U(Image8 im) {
             System.Diagnostics.Debug.Assert(im.Width==Width);
             System.Diagnostics.Debug.Assert(im.Height == Height);
-            IppHelper.IppCheckCall(ip.ippiConvert_16u8u_C1R(Image, Stride, im.Image, im.Stride, Size));
+            IppHelper.IppCheckCall(ip.ippiScale_16u8u_C1R(Image, Stride, im.Image, im.Stride, Size, IppHintAlgorithm.ippAlgHintFast));
         }
 
         /// <summary>
