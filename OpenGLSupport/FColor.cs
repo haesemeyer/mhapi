@@ -11,7 +11,7 @@ namespace MHApi.OpenGLSupport
     /// Represents a floating point color
     /// as used by open gl
     /// </summary>
-    public struct FColor
+    public struct FColor : IEquatable<FColor>
     {
         public float R;
 
@@ -165,5 +165,36 @@ namespace MHApi.OpenGLSupport
                 return new FColor(0.5f, 0.5f, 0.5f);
             }
         }
+
+        #region Equality
+
+        public bool Equals(FColor other)
+        {
+            return this.B == other.B && this.G == other.G && this.R == other.R;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (!(obj is FColor))
+                return false;
+            return Equals((FColor)obj);
+        }
+
+        public static bool operator ==(FColor one, FColor two)
+        {
+            return one.B == two.B && one.G == two.G && one.R == two.R;
+        }
+
+        public static bool operator !=(FColor one, FColor two)
+        {
+            return !(one == two);
+        }
+
+        public override int GetHashCode()
+        {
+            return R.GetHashCode() ^ G.GetHashCode() ^ (B.GetHashCode() << 1);
+        }
+
+        #endregion
     }
 }
