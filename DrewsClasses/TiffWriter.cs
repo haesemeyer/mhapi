@@ -77,7 +77,7 @@ namespace MHApi.DrewsClasses {
                 firstBmp.Palette = palette;
 
                 var EncoderParams = new EncoderParameters(2);
-                EncoderParams.Param[0] = new EncoderParameter(Encoder.Compression, (long)EncoderValue.CompressionLZW);
+                EncoderParams.Param[0] = new EncoderParameter(Encoder.Compression, (long)EncoderValue.CompressionNone);
                 EncoderParams.Param[1] = new EncoderParameter(Encoder.SaveFlag, (long)EncoderValue.MultiFrame);
                 firstBmp.Save(CurrentFileNameWithExtension, tiffCodecInfo, EncoderParams);
                 firstFrame = false;
@@ -102,7 +102,7 @@ namespace MHApi.DrewsClasses {
                 bmp.Palette = palette;
 
                 var EncoderParams = new EncoderParameters(2);
-                EncoderParams.Param[0] = new EncoderParameter(Encoder.Compression, (long)EncoderValue.CompressionLZW);
+                EncoderParams.Param[0] = new EncoderParameter(Encoder.Compression, (long)EncoderValue.CompressionNone);
                 EncoderParams.Param[1] = new EncoderParameter(Encoder.SaveFlag, (long)EncoderValue.FrameDimensionPage);
                 firstBmp.SaveAdd(bmp, EncoderParams);
 
@@ -127,7 +127,7 @@ namespace MHApi.DrewsClasses {
                 firstBmp.Palette = palette;
 
                 var EncoderParams = new EncoderParameters(2);
-                EncoderParams.Param[0] = new EncoderParameter(Encoder.Compression, (long)EncoderValue.CompressionLZW);
+                EncoderParams.Param[0] = new EncoderParameter(Encoder.Compression, (long)EncoderValue.CompressionNone);
                 EncoderParams.Param[1] = new EncoderParameter(Encoder.SaveFlag, (long)EncoderValue.MultiFrame);
                 firstBmp.Save(CurrentFileNameWithExtension, tiffCodecInfo, EncoderParams);
                 firstFrame = false;
@@ -147,7 +147,7 @@ namespace MHApi.DrewsClasses {
                 bmp.Palette = palette;
 
                 var EncoderParams = new EncoderParameters(2);
-                EncoderParams.Param[0] = new EncoderParameter(Encoder.Compression, (long)EncoderValue.CompressionLZW);
+                EncoderParams.Param[0] = new EncoderParameter(Encoder.Compression, (long)EncoderValue.CompressionNone);
                 EncoderParams.Param[1] = new EncoderParameter(Encoder.SaveFlag, (long)EncoderValue.FrameDimensionPage);
                 firstBmp.SaveAdd(bmp, EncoderParams);
 
