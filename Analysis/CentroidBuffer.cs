@@ -45,6 +45,8 @@ namespace MHApi.Analysis
 
         /// <summary>
         /// Pointer to the internal buffer
+        /// IMPORTANT: Even though one buffer stores both x and y coordinates in two "image rows"
+        /// they MUST NOT be filtered together!!!!
         /// </summary>
         public float* Buffer
         {
