@@ -64,7 +64,7 @@ namespace MHApi.Analysis
         {
             _bufferSize = size;
             Stride = _bufferSize * 4;
-            _buffer = (float*)Marshal.AllocHGlobal(Stride);
+            _buffer = (float*)Marshal.AllocHGlobal(Stride*2);
             ip.ippiSet_32f_C1R(0, _buffer, Stride, Size);
         }
 
@@ -76,7 +76,7 @@ namespace MHApi.Analysis
         {
             _bufferSize = source._bufferSize;
             Stride = source.Stride;
-            _buffer = (float*)Marshal.AllocHGlobal(Stride);
+            _buffer = (float*)Marshal.AllocHGlobal(Stride*2);
             ip.ippiCopy_32f_C1R(source._buffer, source.Stride, _buffer, Stride, Size);
         }
 

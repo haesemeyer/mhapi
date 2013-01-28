@@ -6,6 +6,8 @@ using System.Runtime.InteropServices;
 
 using ipp;
 
+using MHApi.Imaging;
+
 namespace MHApi.Analysis
 {
     /// <summary>
@@ -96,24 +98,28 @@ namespace MHApi.Analysis
             IppiSize regionSize = new IppiSize(srcDest.Size.width,1);
             IppiPoint anchor = new IppiPoint(borderSize,0);
             IppiSize kernelSize = new IppiSize(_kernelSize, 1);
+            float* calc1XStart = (float*)((byte*)_calc1.Buffer + borderSize * 4);
+            float* calc1YStart = (float*)((byte*)_calc1.Buffer + borderSize * 4 + _calc1.Stride);
+            float* calc2XStart = (float*)((byte*)_calc2.Buffer + borderSize * 4);
+            float* calc2YStart = (float*)((byte*)_calc2.Buffer + borderSize * 4 + _calc2.Stride);
             //Copy src buffer adding borders
-            ip.ippiCopyConstBorder_32f_C1R(srcDest.Buffer, srcDest.Stride, srcDest.Size, _calc1.Buffer, _calc1.Stride, _calc1.Size, 0, borderSize, 0);
+            IppHelper.IppCheckCall(ip.ippiCopyConstBorder_32f_C1R(srcDest.Buffer, srcDest.Stride, srcDest.Size, _calc1.Buffer, _calc1.Stride, _calc1.Size, 0, borderSize, 0));
             //Fill calc2 to have borders ready after filtering
-            ip.ippiSet_32f_C1R(0, _calc2.Buffer, _calc2.Stride, _calc2.Size);
+            IppHelper.IppCheckCall(ip.ippiSet_32f_C1R(0, _calc2.Buffer, _calc2.Stride, _calc2.Size));
             //filter x-coordinates with our kernel
-            ip.ippiFilter_32f_C1R(_calc1.Buffer+borderSize*4,_calc1.Stride,_calc2.Buffer+4*borderSize,_calc2.Stride,regionSize,_kernel,kernelSize,anchor);
+            IppHelper.IppCheckCall(ip.ippiFilter_32f_C1R(calc1XStart, _calc1.Stride, calc2XStart, _calc2.Stride, regionSize, _kernel, kernelSize, anchor));
             //filter y-coordinates with our kernel
-            ip.ippiFilter_32f_C1R(_calc1.Buffer + borderSize * 4 + _calc1.Stride, _calc1.Stride, _calc2.Buffer + 4 * borderSize + _calc2.Stride, _calc2.Stride, regionSize, _kernel, kernelSize, anchor);
-            //invert image - mirror on vertical axis
-            ip.ippiMirror_32f_C1R(_calc2.Buffer, _calc2.Stride, _calc1.Buffer, _calc1.Stride, _calc2.Size, IppiAxis.ippAxsVertical);
-            //filter x-coordinates with our kernel - now on inverted image
-            ip.ippiFilter_32f_C1R(_calc1.Buffer + borderSize * 4, _calc1.Stride, _calc2.Buffer + 4 * borderSize, _calc2.Stride, regionSize, _kernel, kernelSize, anchor);
-            //filter y-coordinates with our kernel - now on inverted image
-            ip.ippiFilter_32f_C1R(_calc1.Buffer + borderSize * 4 + _calc1.Stride, _calc1.Stride, _calc2.Buffer + 4 * borderSize + _calc2.Stride, _calc2.Stride, regionSize, _kernel, kernelSize, anchor);
-            //flip image back
-            ip.ippiMirror_32f_C1R(_calc2.Buffer, _calc2.Stride, _calc1.Buffer, _calc1.Stride, _calc2.Size, IppiAxis.ippAxsVertical);
+            IppHelper.IppCheckCall(ip.ippiFilter_32f_C1R(calc1YStart, _calc1.Stride, calc2YStart, _calc2.Stride, regionSize, _kernel, kernelSize, anchor));
+            //invert buffer - mirror on vertical axis
+            IppHelper.IppCheckCall(ip.ippiMirror_32f_C1R(_calc2.Buffer, _calc2.Stride, _calc1.Buffer, _calc1.Stride, _calc2.Size, IppiAxis.ippAxsVertical));
+            //filter x-coordinates with our kernel - now on inverted buffer
+            IppHelper.IppCheckCall(ip.ippiFilter_32f_C1R(calc1XStart, _calc1.Stride, calc2XStart, _calc2.Stride, regionSize, _kernel, kernelSize, anchor));
+            //filter y-coordinates with our kernel - now on inverted buffer
+            IppHelper.IppCheckCall(ip.ippiFilter_32f_C1R(calc1YStart, _calc1.Stride, calc2YStart, _calc2.Stride, regionSize, _kernel, kernelSize, anchor));
+            //flip buffer back
+            IppHelper.IppCheckCall(ip.ippiMirror_32f_C1R(_calc2.Buffer, _calc2.Stride, _calc1.Buffer, _calc1.Stride, _calc2.Size, IppiAxis.ippAxsVertical));
             //copy to src-dest
-            ip.ippiCopy_32f_C1R(_calc1.Buffer + borderSize * 4, _calc1.Stride, srcDest.Buffer, srcDest.Stride, srcDest.Size);
+            IppHelper.IppCheckCall(ip.ippiCopy_32f_C1R(calc1XStart, _calc1.Stride, srcDest.Buffer, srcDest.Stride, srcDest.Size));
         }
         
         #region IDisposable Members
