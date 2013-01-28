@@ -92,7 +92,7 @@ namespace MHApi.Analysis
                 if (element >= _bufferSize || element < 0)
                     throw new ArgumentOutOfRangeException("Tried to access element outside of buffer boundaries");
                 float* x, y;
-                x = (float*)((byte*)_buffer + element);
+                x = (float*)((byte*)_buffer + element * 4);
                 y = (float*)((byte*)_buffer + element * 4 + Stride);
                 return new IppiPoint_32f(*x, *y);
             }
