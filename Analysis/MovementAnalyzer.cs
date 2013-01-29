@@ -9,6 +9,8 @@ using MHApi.Imaging;
 
 namespace MHApi.Analysis
 {
+    #region Structs
+
     /// <summary>
     /// Structure to describe a bout
     /// </summary>
@@ -50,6 +52,22 @@ namespace MHApi.Analysis
     }
 
     /// <summary>
+    /// A structure to hold bout summary information
+    /// </summary>
+    public struct BoutSummary
+    {
+        public int NumberOfBouts { get; set; }
+
+        public float AveragePeakSpeed { get; set; }
+
+        public float AverageLength { get; set; }
+
+        public float AverageDisplacement { get; set; }
+    }
+
+    #endregion
+
+    /// <summary>
     /// This class provided functionality to calculate instant
     /// speeds and detect bouts
     /// </summary>
@@ -65,6 +83,11 @@ namespace MHApi.Analysis
         /// </summary>
         CentroidBuffer _calc2;
 
+        /// <summary>
+        /// Internal buffer for data processing
+        /// </summary>
+        InstantSpeedBuffer _isCalc;
+
         public MovementAnalyzer() { }
 
         public MovementAnalyzer(int nFrames)
@@ -72,8 +95,10 @@ namespace MHApi.Analysis
             //Pre-allocate and blank buffers
             _calc1 = new CentroidBuffer(nFrames);
             _calc2 = new CentroidBuffer(nFrames);
+            _isCalc = new InstantSpeedBuffer(nFrames);
             ip.ippiSet_32f_C1R(0, _calc1.Buffer, _calc1.Stride, _calc1.Size);
             ip.ippiSet_32f_C1R(0, _calc2.Buffer, _calc2.Stride, _calc2.Size);
+            ip.ippiSet_32f_C1R(0, _isCalc.Buffer, _isCalc.Stride, _isCalc.Size);
         }
 
         /// <summary>
@@ -141,16 +166,29 @@ namespace MHApi.Analysis
         /// <returns>A queue of bout structures describing every bout</returns>
         public Queue<Bout> DetectBouts(InstantSpeedBuffer isb, float speedThreshold, int minFramesPerBout, int maxFramesAtPeak, int frameRate)
         {
+            if (IsDisposed)
+                throw new ObjectDisposedException(this.ToString());
+
+            if (_isCalc == null)
+            {
+                _isCalc = new InstantSpeedBuffer(isb.Size.width);
+            }
+            else if (_isCalc.Size.width != isb.Size.width)
+            {
+                _isCalc.Dispose();
+                _isCalc = new InstantSpeedBuffer(isb.Size.width);
+            }
+
             Queue<Bout> retval = new Queue<Bout>();
 
             int i = 0;
 
-            //threshold the speed trace
-            ip.ippiThreshold_LTVal_32f_C1IR(isb.Buffer, isb.Stride, isb.Size, speedThreshold, 0);
+            //threshold the speed trace - copy result into our calculation buffer
+            ip.ippiThreshold_LTVal_32f_C1R(isb.Buffer, isb.Stride, _isCalc.Buffer, _isCalc.Stride, isb.Size, speedThreshold, 0);
 
-            while (i < isb.Size.width)
+            while (i < _isCalc.Size.width)
             {
-                if (isb[i] == 0)
+                if (_isCalc[i] == 0)
                 {
                     i++;
                     continue;
@@ -160,21 +198,21 @@ namespace MHApi.Analysis
                     int peaklength = 0;
                     Bout b = new Bout();
                     b.BoutStart = i;
-                    b.PeakSpeed = isb[i];
+                    b.PeakSpeed = _isCalc[i];
                     b.BoutPeak = i;
-                    b.TotalDisplacement = isb[i] / frameRate;
+                    b.TotalDisplacement = _isCalc[i] / frameRate;
                     //loop over following frames collecting all frames that belong to the bout
-                    while (i < isb.Size.width && isb[i] > 0)
+                    while (i < _isCalc.Size.width && _isCalc[i] > 0)
                     {
-                        if (isb[i] > b.PeakSpeed)
+                        if (_isCalc[i] > b.PeakSpeed)
                         {
-                            b.PeakSpeed = isb[i];
+                            b.PeakSpeed = _isCalc[i];
                             b.BoutPeak = i;
                             peaklength = 0;//new peakspeed found, reset peaklength
                         }
-                        else if (isb[i] == b.PeakSpeed)//another frame with the same speed as our peak
+                        else if (_isCalc[i] == b.PeakSpeed)//another frame with the same speed as our peak
                             peaklength++;
-                        b.TotalDisplacement += isb[i] / frameRate;
+                        b.TotalDisplacement += _isCalc[i] / frameRate;
                         i++;
                     }
                     b.BoutEnd = i - 1;
@@ -188,6 +226,86 @@ namespace MHApi.Analysis
                     }
                 }//found potential bout
             }
+            return retval;
+        }
+
+        /// <summary>
+        /// Detects bouts and returns summary information
+        /// </summary>
+        /// <param name="isb">The instant speed trace</param>
+        /// <param name="speedThreshold">Speeds below this threshold will be set to 0</param>
+        /// <param name="minFramesPerBout">For a movement to be called a bout we require at least this number of frames</param>
+        /// <param name="maxFramesAtPeak">Bouts should have clearly defined peaks. Bouts with a peak longer than this number get rejected</param>
+        /// <param name="frameRate">The framerate used for acquisition</param>
+        /// <returns>A bout summary info structure</returns>
+        public BoutSummary AnalyzeBouts(InstantSpeedBuffer isb, float speedThreshold, int minFramesPerBout, int maxFramesAtPeak, int frameRate)
+        {
+            if (IsDisposed)
+                throw new ObjectDisposedException(this.ToString());
+
+            if (_isCalc == null)
+            {
+                _isCalc = new InstantSpeedBuffer(isb.Size.width);
+            }
+            else if (_isCalc.Size.width != isb.Size.width)
+            {
+                _isCalc.Dispose();
+                _isCalc = new InstantSpeedBuffer(isb.Size.width);
+            }
+
+            BoutSummary retval = new BoutSummary();
+            Bout b = new Bout();
+
+            int i = 0;
+
+            //threshold the speed trace - copy result into our calculation buffer
+            ip.ippiThreshold_LTVal_32f_C1R(isb.Buffer, isb.Stride, _isCalc.Buffer, _isCalc.Stride, isb.Size, speedThreshold, 0);
+
+            while (i < _isCalc.Size.width)
+            {
+                if (_isCalc[i] == 0)
+                {
+                    i++;
+                    continue;
+                }
+                else//found potential bout start since speed above threshold
+                {
+                    int peaklength = 0;
+                    b.BoutStart = i;
+                    b.PeakSpeed = _isCalc[i];
+                    b.BoutPeak = i;
+                    b.TotalDisplacement = _isCalc[i] / frameRate;
+                    //loop over following frames collecting all frames that belong to the bout
+                    while (i < _isCalc.Size.width && _isCalc[i] > 0)
+                    {
+                        if (_isCalc[i] > b.PeakSpeed)
+                        {
+                            b.PeakSpeed = _isCalc[i];
+                            b.BoutPeak = i;
+                            peaklength = 0;//new peakspeed found, reset peaklength
+                        }
+                        else if (_isCalc[i] == b.PeakSpeed)//another frame with the same speed as our peak
+                            peaklength++;
+                        b.TotalDisplacement += _isCalc[i] / frameRate;
+                        i++;
+                    }
+                    b.BoutEnd = i - 1;
+                    //check our bout criteria
+                    if ((b.BoutEnd - b.BoutStart + 1) >= minFramesPerBout && peaklength <= maxFramesAtPeak)
+                    {
+                        //we have a valid bout
+                        if (b.BoutStart == b.BoutPeak)
+                            b.BoutStart--;
+                        retval.NumberOfBouts++;
+                        retval.AverageDisplacement += b.TotalDisplacement;
+                        retval.AveragePeakSpeed += b.PeakSpeed;
+                        retval.AverageLength += (b.BoutEnd - b.BoutStart + 1);
+                    }
+                }//found potential bout
+            }
+            retval.AverageDisplacement /= retval.NumberOfBouts;
+            retval.AveragePeakSpeed /= retval.NumberOfBouts;
+            retval.AverageLength /= retval.NumberOfBouts;
             return retval;
         }
 
@@ -208,6 +326,11 @@ namespace MHApi.Analysis
             {
                 _calc2.Dispose();
                 _calc2 = null;
+            }
+            if (_isCalc != null)
+            {
+                _isCalc.Dispose();
+                _isCalc = null;
             }
             IsDisposed = true;
         }
