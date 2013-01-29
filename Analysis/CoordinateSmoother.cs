@@ -56,6 +56,12 @@ namespace MHApi.Analysis
                 _kernel[i++] = 1 / (float)_kernelSize;
         }
 
+        /// <summary>
+        /// Implements coordinate smoothing analogous to using filtfilt in matlab with a step function kernel
+        /// (moving average with no peak displacement)
+        /// </summary>
+        /// <param name="srcDest">The source and destination coordinate buffer</param>
+        /// <param name="windowSize">The windowsize for averaging</param>
         public void SmoothenTrack(CentroidBuffer srcDest, int windowSize)
         {
             if (IsDisposed)
@@ -110,6 +116,7 @@ namespace MHApi.Analysis
             IppHelper.IppCheckCall(ip.ippiFilter_32f_C1R(calc1XStart, _calc1.Stride, calc2XStart, _calc2.Stride, regionSize, _kernel, kernelSize, anchor));
             //filter y-coordinates with our kernel
             IppHelper.IppCheckCall(ip.ippiFilter_32f_C1R(calc1YStart, _calc1.Stride, calc2YStart, _calc2.Stride, regionSize, _kernel, kernelSize, anchor));
+         
             //invert buffer - mirror on vertical axis
             IppHelper.IppCheckCall(ip.ippiMirror_32f_C1R(_calc2.Buffer, _calc2.Stride, _calc1.Buffer, _calc1.Stride, _calc2.Size, IppiAxis.ippAxsVertical));
             //filter x-coordinates with our kernel - now on inverted buffer
