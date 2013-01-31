@@ -57,19 +57,33 @@ namespace MHApi.Analysis
         }
 
         /// <summary>
-        /// Implements coordinate smoothing analogous to using filtfilt in matlab with a step function kernel
+        /// Implements in place coordinate smoothing analogous to using filtfilt in matlab with a step function kernel
         /// (moving average with no peak displacement)
         /// </summary>
         /// <param name="srcDest">The source and destination coordinate buffer</param>
         /// <param name="windowSize">The windowsize for averaging</param>
         public void SmoothenTrack(CentroidBuffer srcDest, int windowSize)
         {
+            SmoothenTrack(srcDest, srcDest, windowSize);
+        }
+
+        /// <summary>
+        /// Implements coordinate smoothing analogous to using filtfilt in matlab with a step function kernel
+        /// (moving average with no peak displacement)
+        /// </summary>
+        /// <param name="src">The source track to smoothen</param>
+        /// <param name="dst">The destination buffer for the smoothened track</param>
+        /// <param name="windowSize">The windowsize for averaging</param>
+        public void SmoothenTrack(CentroidBuffer src, CentroidBuffer dst, int windowSize)
+        {
             if (IsDisposed)
                 throw new ObjectDisposedException(this.ToString());
+            if (src.Size.width != dst.Size.width)
+                throw new ArgumentException("Source and destination buffers need to have the same size!");
             //For the internal buffers we require a size that fits both the coordinate buffer we
             //intend to filter as well as the border pixels required for filtering
             int borderSize = (int)Math.Ceiling(windowSize / 2.0);
-            int reqSize = srcDest.Size.width + borderSize * 2;
+            int reqSize = src.Size.width + borderSize * 2;
             //Adjust internal buffers if necessary
             if (_calc1 == null)
             {
@@ -101,22 +115,22 @@ namespace MHApi.Analysis
                     _kernel[i++] = 1 / (float)_kernelSize;
             }
             //filter parameters
-            IppiSize regionSize = new IppiSize(srcDest.Size.width,1);
-            IppiPoint anchor = new IppiPoint(borderSize,0);
+            IppiSize regionSize = new IppiSize(src.Size.width, 1);
+            IppiPoint anchor = new IppiPoint(borderSize, 0);
             IppiSize kernelSize = new IppiSize(_kernelSize, 1);
             float* calc1XStart = (float*)((byte*)_calc1.Buffer + borderSize * 4);
             float* calc1YStart = (float*)((byte*)_calc1.Buffer + borderSize * 4 + _calc1.Stride);
             float* calc2XStart = (float*)((byte*)_calc2.Buffer + borderSize * 4);
             float* calc2YStart = (float*)((byte*)_calc2.Buffer + borderSize * 4 + _calc2.Stride);
             //Copy src buffer adding borders
-            IppHelper.IppCheckCall(ip.ippiCopyConstBorder_32f_C1R(srcDest.Buffer, srcDest.Stride, srcDest.Size, _calc1.Buffer, _calc1.Stride, _calc1.Size, 0, borderSize, 0));
+            IppHelper.IppCheckCall(ip.ippiCopyConstBorder_32f_C1R(src.Buffer, src.Stride, src.Size, _calc1.Buffer, _calc1.Stride, _calc1.Size, 0, borderSize, 0));
             //Fill calc2 to have borders ready after filtering
             IppHelper.IppCheckCall(ip.ippiSet_32f_C1R(0, _calc2.Buffer, _calc2.Stride, _calc2.Size));
             //filter x-coordinates with our kernel
             IppHelper.IppCheckCall(ip.ippiFilter_32f_C1R(calc1XStart, _calc1.Stride, calc2XStart, _calc2.Stride, regionSize, _kernel, kernelSize, anchor));
             //filter y-coordinates with our kernel
             IppHelper.IppCheckCall(ip.ippiFilter_32f_C1R(calc1YStart, _calc1.Stride, calc2YStart, _calc2.Stride, regionSize, _kernel, kernelSize, anchor));
-         
+
             //invert buffer - mirror on vertical axis
             IppHelper.IppCheckCall(ip.ippiMirror_32f_C1R(_calc2.Buffer, _calc2.Stride, _calc1.Buffer, _calc1.Stride, _calc2.Size, IppiAxis.ippAxsVertical));
             //filter x-coordinates with our kernel - now on inverted buffer
@@ -125,8 +139,8 @@ namespace MHApi.Analysis
             IppHelper.IppCheckCall(ip.ippiFilter_32f_C1R(calc1YStart, _calc1.Stride, calc2YStart, _calc2.Stride, regionSize, _kernel, kernelSize, anchor));
             //flip buffer back
             IppHelper.IppCheckCall(ip.ippiMirror_32f_C1R(_calc2.Buffer, _calc2.Stride, _calc1.Buffer, _calc1.Stride, _calc2.Size, IppiAxis.ippAxsVertical));
-            //copy to src-dest
-            IppHelper.IppCheckCall(ip.ippiCopy_32f_C1R(calc1XStart, _calc1.Stride, srcDest.Buffer, srcDest.Stride, srcDest.Size));
+            //copy to dest
+            IppHelper.IppCheckCall(ip.ippiCopy_32f_C1R(calc1XStart, _calc1.Stride, dst.Buffer, dst.Stride, dst.Size));
         }
         
         #region IDisposable Members
