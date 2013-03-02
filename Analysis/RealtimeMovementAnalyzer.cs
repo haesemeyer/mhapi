@@ -62,6 +62,80 @@ namespace MHApi.Analysis
     /// </summary>
     public unsafe class RealtimeMovementAnalyzer : IDisposable
     {
+        /// <summary>
+        /// Collects information about the current state of bout detection.
+        /// Whether we are currently analyzing a putative bout and what its
+        /// characteristics are
+        /// </summary>
+        private struct BoutDetectionState
+        {
+            /// <summary>
+            /// If true, signals that the fish
+            /// may currently perform a bout
+            /// </summary>
+            public bool InPutativeBout;
+
+            /// <summary>
+            /// Counter of frames where speed
+            /// is above threshold in the put. bout
+            /// </summary>
+            public int FramesInBout;
+
+            /// <summary>
+            /// The encountered peakspeed of the bout
+            /// </summary>
+            public float PeakSpeed;
+
+            /// <summary>
+            /// Starting frame of putative bout
+            /// </summary>
+            public int StartFrame;
+
+            /// <summary>
+            /// The currently believed peakframe
+            /// </summary>
+            public int PeakFrame;
+
+            /// <summary>
+            /// Last frame of putative bout
+            /// </summary>
+            public int EndFrame;
+
+            /// <summary>
+            /// Total displacememt of
+            /// putative bout
+            /// </summary>
+            public float TotalDisplacement;
+
+            /// <summary>
+            /// The total number of frames at
+            /// peakspeed in the putative bout
+            /// </summary>
+            public int FramesAtPeak;
+
+            /// <summary>
+            /// The (smoothened) position where
+            /// the current putative bout started
+            /// </summary>
+            public IppiPoint_32f StartingCoordinate;
+
+            /// <summary>
+            /// Resets all values to default state at the start
+            /// of a putative bout
+            /// </summary>
+            public void StartBout(float currentSpeed, int currentFrame, int frameRate)
+            {
+                InPutativeBout = true;
+                FramesInBout = 1;
+                PeakSpeed = currentSpeed;
+                StartFrame = currentFrame;
+                PeakFrame = currentFrame;
+                EndFrame = currentFrame;
+                TotalDisplacement = currentSpeed / frameRate;
+                FramesAtPeak = 1;
+            }
+        }
+
         #region Fields
 
         /// <summary>
@@ -174,6 +248,12 @@ namespace MHApi.Analysis
         /// </summary>
         int _maxFramesAtPeak;
 
+        /// <summary>
+        /// Keeps track of the current state of our
+        /// bout detector
+        /// </summary>
+        BoutDetectionState _boutDetectionState;
+
         #endregion
 
         #region Constructor
@@ -213,6 +293,7 @@ namespace MHApi.Analysis
             {
                 sp.ippsFIRInit_32f(ppState, _taps, _tapLength, _dlyLines, _stateMemY);
             }
+            _boutDetectionState = new BoutDetectionState();
         }
 
         public RealtimeMovementAnalyzer(int frameRate, int smoothingWindowSize, int speedSmoothingWindowSize, float speedThreshold, int minFramesPerBout, int maxFramesAtPeak)
@@ -289,10 +370,56 @@ namespace MHApi.Analysis
                 sp.ippsFIR_32f(&speed, &spdSmooth, 1, _filterStateSpd);
             else
                 spdSmooth = speed;
-            //update index and last coordinates
-            _index++;
+            //update last coordinates
             _lastX = xSmooth;
             _lastY = ySmooth;
+
+            //Bout detection
+            if (_boutDetectionState.InPutativeBout)//we are currently adding frames to a new putative bout
+            {
+                if (spdSmooth < _speedThreshold)//putative bout is finished
+                {
+                    _boutDetectionState.InPutativeBout = false;//reset
+                    if (_boutDetectionState.FramesInBout >= _minFramesPerBout && _boutDetectionState.FramesAtPeak <= _maxFramesAtPeak)//bout was valid, fill bout structure and return it
+                    {
+                        Bout bout = new Bout();
+                        bout.BoutEnd = _index-1;
+                        bout.BoutStart = _boutDetectionState.StartFrame;
+                        bout.BoutPeak = _boutDetectionState.PeakFrame;
+                        if (bout.BoutPeak == bout.BoutStart)
+                            bout.BoutStart--;//don't start bout on peakframe
+                        bout.PeakSpeed = _boutDetectionState.PeakSpeed;
+                        bout.TotalDisplacement = _boutDetectionState.TotalDisplacement;
+                        //don't forget to update the index before we return
+                        _index++;
+                        return new PointAnalysis(bout, coordinate, new IppiPoint_32f(xSmooth, ySmooth), spdSmooth);
+                    }
+                }
+                else//putative bout continues
+                {
+                    _boutDetectionState.FramesInBout++;
+                    _boutDetectionState.TotalDisplacement += spdSmooth / _frameRate;
+                    if (spdSmooth > _boutDetectionState.PeakSpeed)//new peak-speed detected
+                    {
+                        _boutDetectionState.PeakSpeed = spdSmooth;
+                        _boutDetectionState.PeakFrame = _index;
+                        _boutDetectionState.FramesAtPeak = 1;//reset
+                    }
+                    else if (spdSmooth == _boutDetectionState.PeakSpeed)//maybe not the best criterion - equality of float values very unlikely
+                        _boutDetectionState.FramesAtPeak++;
+                }
+            }
+            else//currently the fish is stationary
+            {
+                if (spdSmooth > _speedThreshold)//we should start a new putative bout
+                {
+                    _boutDetectionState.StartBout(spdSmooth, _index, _frameRate);
+                    _boutDetectionState.StartingCoordinate.x = xSmooth;
+                    _boutDetectionState.StartingCoordinate.y = ySmooth;
+                }
+            }
+            //advance index
+            _index++;
             //return our analysis
             return new PointAnalysis(coordinate, new IppiPoint_32f(xSmooth, ySmooth), spdSmooth);
         }
