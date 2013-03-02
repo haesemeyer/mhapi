@@ -65,20 +65,36 @@ namespace MHApi.Analysis
         #region Fields
 
         /// <summary>
-        /// The filter taps
+        /// The coordinate filter taps
         /// </summary>
         float* _taps;
 
         /// <summary>
-        /// Initializer for our delay lines
+        /// The (optional) speed filter taps
+        /// </summary>
+        float* _spdTaps;
+
+        /// <summary>
+        /// Initializer for our coordinate delay lines
         /// (will be 0)
         /// </summary>
         float* _dlyLines;
 
         /// <summary>
-        /// The number of taps in our filter
+        /// Initializer for our (optional)
+        /// speed delay lines
+        /// </summary>
+        float* _spdLines;
+
+        /// <summary>
+        /// The number of taps in our coordinate filter
         /// </summary>
         int _tapLength;
+
+        /// <summary>
+        /// The number of taps in our (optional) speed filter
+        /// </summary>
+        int _spdTapLength;
 
         /// <summary>
         /// Pointer to the filter state structure for our
@@ -103,6 +119,18 @@ namespace MHApi.Analysis
         /// y-coordinate filter state structure
         /// </summary>
         byte* _stateMemY;
+
+        /// <summary>
+        /// Pointer to the filter state structure
+        /// for our FIR filter of the instant speeds
+        /// </summary>
+        IppsFIRState_32f* _filterStateSpd;
+
+        /// <summary>
+        /// The buffer in memory for the actual
+        /// speed filter state structure
+        /// </summary>
+        byte* _stateMemSpd;
 
         /// <summary>
         /// The index of the current
@@ -160,6 +188,8 @@ namespace MHApi.Analysis
             _index = 0;
             _lastX = 0;
             _lastY = 0;
+            //don't use instant speed filtering
+            _spdTapLength = 0;
             //allocate memory for taps and delay lines
             _taps = (float*)Marshal.AllocHGlobal(_tapLength * 4);
             _dlyLines = (float*)Marshal.AllocHGlobal(_tapLength * 4);
@@ -185,6 +215,31 @@ namespace MHApi.Analysis
             }
         }
 
+        public RealtimeMovementAnalyzer(int frameRate, int smoothingWindowSize, int speedSmoothingWindowSize, float speedThreshold, int minFramesPerBout, int maxFramesAtPeak)
+            :this(frameRate,smoothingWindowSize,speedThreshold,minFramesPerBout,maxFramesAtPeak)
+        {
+            _spdTapLength = speedSmoothingWindowSize;
+            //allocate memory for speed taps and delay lines
+            _spdTaps = (float*)Marshal.AllocHGlobal(_spdTapLength * 4);
+            _spdLines = (float*)Marshal.AllocHGlobal(_spdTapLength * 4);
+            //allocate memory for taps and delay lines
+            //set filter taps - boxcar filter
+            int i = 0;
+            while (i < _spdTapLength)
+                _spdTaps[i++] = 1 / (float)_spdTapLength;
+            //set speed delay lines to 0
+            sp.ippsZero_32f(_spdLines, _spdTapLength);
+            //get memory requirements and allocate state structure
+            int size = 0;
+            sp.ippsFIRGetStateSize_32f(_spdTapLength, &size);
+            _stateMemSpd = (byte*)Marshal.AllocHGlobal(size);
+            //initialize state structure
+            fixed (IppsFIRState_32f** ppState = &_filterStateSpd)
+            {
+                sp.ippsFIRInit_32f(ppState,_spdTaps, _spdTapLength, _spdLines, _stateMemSpd);
+            }
+        }
+
         #endregion
 
         #region Methods
@@ -203,6 +258,8 @@ namespace MHApi.Analysis
             //re-blank the delay lines of the FIR filters
             sp.ippsFIRSetDlyLine_32f(_filterStateX, _dlyLines);
             sp.ippsFIRSetDlyLine_32f(_filterStateY, _dlyLines);
+            if (_spdTapLength > 0)
+                sp.ippsFIRSetDlyLine_32f(_filterStateSpd, _spdLines);
         }
 
         /// <summary>
@@ -218,6 +275,8 @@ namespace MHApi.Analysis
             float y = coordinate.y;
             float xSmooth, ySmooth, speed;
             xSmooth = ySmooth = speed = 0;
+            //optional filtered speed
+            float spdSmooth = 0;
             //filter x-coordinate
             sp.ippsFIR_32f(&x, &xSmooth, 1, _filterStateX);
             //filter y-coordinate
@@ -225,12 +284,17 @@ namespace MHApi.Analysis
             //compute instant speed
             speed = (float)Math.Sqrt((xSmooth - _lastX) * (xSmooth - _lastX) + (ySmooth - _lastY) * (ySmooth - _lastY));
             speed *= 240;
+            //if requested, also filter the instant-speed value
+            if (_spdTapLength > 0)
+                sp.ippsFIR_32f(&speed, &spdSmooth, 1, _filterStateSpd);
+            else
+                spdSmooth = speed;
             //update index and last coordinates
             _index++;
             _lastX = xSmooth;
             _lastY = ySmooth;
             //return our analysis
-            return new PointAnalysis(coordinate, new IppiPoint_32f(xSmooth, ySmooth), speed);
+            return new PointAnalysis(coordinate, new IppiPoint_32f(xSmooth, ySmooth), spdSmooth);
         }
 
         #endregion
@@ -262,6 +326,21 @@ namespace MHApi.Analysis
             {
                 Marshal.FreeHGlobal((IntPtr)_stateMemY);
                 _stateMemY = null;
+            }
+            if (_spdTaps != null)
+            {
+                Marshal.FreeHGlobal((IntPtr)_spdTaps);
+                _spdTaps = null;
+            }
+            if (_spdLines != null)
+            {
+                Marshal.FreeHGlobal((IntPtr)_spdLines);
+                _spdLines = null;
+            }
+            if (_stateMemSpd != null)
+            {
+                Marshal.FreeHGlobal((IntPtr)_stateMemSpd);
+                _stateMemSpd = null;
             }
             IsDisposed = true;
         }
