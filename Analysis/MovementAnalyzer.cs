@@ -42,7 +42,17 @@ namespace MHApi.Analysis
         public float PeakSpeed { get; set; }
 
         /// <summary>
-        /// Converts the bout structure to a string representation
+        /// The position of the fish at the beginning of the bout
+        /// </summary>
+        public IppiPoint_32f StartingCoordinate { get; set; }
+
+        /// <summary>
+        /// The position of the fish at the end of the bout
+        /// </summary>
+        public IppiPoint_32f FinishCoordinate { get; set; }
+
+        /// <summary>
+        /// Converts the bout structure except the coordinates to a string representation
         /// </summary>
         /// <returns>A tab-delimited string of the bout characteristics</returns>
         public override string ToString()

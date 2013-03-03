@@ -390,6 +390,8 @@ namespace MHApi.Analysis
                             bout.BoutStart--;//don't start bout on peakframe
                         bout.PeakSpeed = _boutDetectionState.PeakSpeed;
                         bout.TotalDisplacement = _boutDetectionState.TotalDisplacement;
+                        bout.StartingCoordinate = _boutDetectionState.StartingCoordinate;
+                        bout.FinishCoordinate = new IppiPoint_32f(xSmooth, ySmooth);
                         //don't forget to update the index before we return
                         _index++;
                         return new PointAnalysis(bout, coordinate, new IppiPoint_32f(xSmooth, ySmooth), spdSmooth);
