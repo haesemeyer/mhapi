@@ -221,6 +221,80 @@ namespace MHApi.Scanning
             return HitStatus.Success;
         }
 
+        /// <summary>
+        /// Tests the connection with the mirror setup reading set values
+        /// back from dev1 ai0 (for x-mirror) and dev1 ai1 (for y-mirror)
+        /// </summary>
+        /// <returns>True if successfull</returns>
+        public bool TestConnection()
+        {
+            return TestConnection("dev1", "ai0", "ai1");
+        }
+
+        /// <summary>
+        /// Tests the connection with the mirror setup reading position
+        /// values back from the indicated analog in channels on the indicated device
+        /// </summary>
+        /// <param name="aiDevice">The NI board to connect to (f.e. "dev1")</param>
+        /// <param name="aiX">The analog in that reads x-mirror position (f.e. "ai0")</param>
+        /// <param name="aiY">The analog in that reads y-mirror position (f.e. "ai1")</param>
+        /// <returns>True if successfull</returns>
+        public bool TestConnection(string aiDevice, string aiX, string aiY)
+        {
+            string connectX = aiDevice + '/' + aiX;
+            string connectY = aiDevice + '/' + aiY;
+            Task mirrorPosTask = new Task("mirrorRead");
+            var samples = new double[2, 100];//in each read we read 10 samples from 2 analog ins (mirrorX and mirrorY)
+            double avgx, avgy;//the averages of the read voltages for both mirrors
+            mirrorPosTask.AIChannels.CreateVoltageChannel(connectX, "ChanXMirror", AITerminalConfiguration.Differential, -10, 10, AIVoltageUnits.Volts);
+            mirrorPosTask.AIChannels.CreateVoltageChannel(connectY, "ChanYMirror", AITerminalConfiguration.Differential, -10, 10, AIVoltageUnits.Volts);
+            mirrorPosTask.Timing.ConfigureSampleClock("", 100, SampleClockActiveEdge.Rising, SampleQuantityMode.FiniteSamples, 100);
+            AnalogMultiChannelReader aiReader = new AnalogMultiChannelReader(mirrorPosTask.Stream);
+            //hit first point
+            IppiPoint_32f target = new IppiPoint_32f(-5, -5);
+            Hit(target);
+            System.Threading.Thread.Sleep(10);//give mirrors time to settle
+            mirrorPosTask.Start();
+            while (mirrorPosTask.Stream.AvailableSamplesPerChannel < 100) { }//wait until all samples are acquired
+            //read mirror position back
+            samples = aiReader.ReadMultiSample(100);
+            mirrorPosTask.Stop();
+            avgx = avgy = 0;
+            for (int i = 0; i < 100; i++)
+            {
+                avgx += (samples[0, i] / 100);
+                avgy += (samples[1, i] / 100);
+            }
+            if (Math.Round(avgx) != -5 || Math.Round(avgy) != -5)
+            {
+                mirrorPosTask.Dispose();
+                return false;
+            }
+            //hit second point
+            target.x = 5;
+            target.y = 5;
+            Hit(target);
+            System.Threading.Thread.Sleep(10);//give mirrors time to settle
+            mirrorPosTask.Start();
+            while (mirrorPosTask.Stream.AvailableSamplesPerChannel < 100) { }//wait until all samples are acquired
+            //read mirror position back
+            samples = aiReader.ReadMultiSample(100);
+            mirrorPosTask.Stop();
+            avgx = avgy = 0;
+            for (int i = 0; i < 100; i++)
+            {
+                avgx += (samples[0, i] / 100);
+                avgy += (samples[1, i] / 100);
+            }
+            if (Math.Round(avgx) != 5 || Math.Round(avgy) != 5)
+            {
+                mirrorPosTask.Dispose();
+                return false;
+            }
+            mirrorPosTask.Dispose();
+            return true;
+        }
+
         #endregion
 
         #region Cleanup
