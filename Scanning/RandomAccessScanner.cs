@@ -224,11 +224,12 @@ namespace MHApi.Scanning
         /// <summary>
         /// Tests the connection with the mirror setup reading set values
         /// back from dev1 ai0 (for x-mirror) and dev1 ai1 (for y-mirror)
+        /// and default ai scale factor of 0.75
         /// </summary>
         /// <returns>True if successfull</returns>
         public bool TestConnection()
         {
-            return TestConnection("dev1", "ai0", "ai1");
+            return TestConnection("dev1", "ai0", "ai1", 0.75);
         }
 
         /// <summary>
@@ -238,8 +239,9 @@ namespace MHApi.Scanning
         /// <param name="aiDevice">The NI board to connect to (f.e. "dev1")</param>
         /// <param name="aiX">The analog in that reads x-mirror position (f.e. "ai0")</param>
         /// <param name="aiY">The analog in that reads y-mirror position (f.e. "ai1")</param>
+        /// <param name="scaleFactor">The scale factor between supplied ao-voltage and the corresponding ai-voltage supplied by the breakout board (scale = V(ai)/V(a0))</param>
         /// <returns>True if successfull</returns>
-        public bool TestConnection(string aiDevice, string aiX, string aiY)
+        public bool TestConnection(string aiDevice, string aiX, string aiY, double scaleFactor)
         {
             string connectX = aiDevice + '/' + aiX;
             string connectY = aiDevice + '/' + aiY;
@@ -265,7 +267,7 @@ namespace MHApi.Scanning
                 avgx += (samples[0, i] / 100);
                 avgy += (samples[1, i] / 100);
             }
-            if (Math.Round(avgx) != -5 || Math.Round(avgy) != -5)
+            if (Math.Round(avgx/scaleFactor) != -5 || Math.Round(avgy/scaleFactor) != -5)
             {
                 mirrorPosTask.Dispose();
                 return false;
@@ -286,7 +288,7 @@ namespace MHApi.Scanning
                 avgx += (samples[0, i] / 100);
                 avgy += (samples[1, i] / 100);
             }
-            if (Math.Round(avgx) != 5 || Math.Round(avgy) != 5)
+            if (Math.Round(avgx/scaleFactor) != 5 || Math.Round(avgy/scaleFactor) != 5)
             {
                 mirrorPosTask.Dispose();
                 return false;
