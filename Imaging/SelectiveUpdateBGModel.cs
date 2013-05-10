@@ -13,19 +13,18 @@ namespace MHApi.Imaging
     {
 
         public SelectiveUpdateBGModel(Image8 im) : base(im, 0.1F) {
-            _cache = new Image8(im.Width, im.Height);
+            _updateMask = new Image8(im.Width, im.Height);
         }
 
         public SelectiveUpdateBGModel(Image8 im, float fUpdate) : base(im, fUpdate) {
-            _cache = new Image8(im.Width, im.Height);
+            _updateMask = new Image8(im.Width, im.Height);
         }
 
         /// <summary>
-        /// Since our selective update modifies the foreground
-        /// we do this on the cached version rather than the
-        /// Image handed to us
+        /// We restrict our background update to regions that are not within
+        /// fish bounding boxes by doing a masked background update
         /// </summary>
-        protected Image8 _cache;
+        protected Image8 _updateMask;
 
         /// <summary>
         /// Update background excluding detected regions from the update
@@ -34,24 +33,22 @@ namespace MHApi.Imaging
         /// <param name="regionsToExclude">The blobs that should be excluded from the update</param>
         public virtual void UpdateBackground(Image8 im, Blob[] regionsToExclude)
         {
-            if (regionsToExclude == null)
+            if (regionsToExclude == null)//do a simple update
                 UpdateBackground(im);
             else
             {
-                Image8 currentBG = Background;//cache it so the 8-bit representation does not get created multiple times
-                ip.ippiCopy_8u_C1R(im.Image, im.Stride, _cache.Image, _cache.Stride, im.Size);
+                //reset our mask to <update all>, then fill all bounding boxes with 0s
+                ip.ippiSet_8u_C1R(byte.MaxValue, _updateMask.Image, _updateMask.Stride, _updateMask.Size);
                 foreach (Blob b in regionsToExclude)
                 {
                     if (b != null)
                     {
-                        //for each blob we don't want to update the background. This is the same
-                        //as updating it after copying that part of the current background image
-                        //into the forground
                         IppiROI roi = new IppiROI(b.BoundingBox);
-                        ip.ippiCopy_8u_C1R(currentBG[roi.TopLeft], currentBG.Stride, _cache[roi.TopLeft], _cache.Stride, roi.Size);
+                        ip.ippiSet_8u_C1R(0, _updateMask[roi.TopLeft], _updateMask.Stride, roi.Size);
                     }
                 }
-                UpdateBackground(_cache);
+
+                IppHelper.IppCheckCall(cv.ippiAddWeighted_8u32f_C1IMR(im.Image, im.Stride, _updateMask.Image, _updateMask.Stride, background.Image, background.Stride, im.Size, FractionUpdate));
             }
         }
 
@@ -66,20 +63,18 @@ namespace MHApi.Imaging
                 UpdateBackground(im);
             else
             {
-                Image8 currentBG = Background;//cache it so the 8-bit representation does not get created multiple times
-                ip.ippiCopy_8u_C1R(im.Image, im.Stride, _cache.Image, _cache.Stride, im.Size);
+                //reset our mask to <update all>, then fill all bounding boxes with 0s
+                ip.ippiSet_8u_C1R(byte.MaxValue, _updateMask.Image, _updateMask.Stride, _updateMask.Size);
                 foreach (BlobWithMoments b in regionsToExclude)
                 {
                     if (b != null)
                     {
-                        //for each blob we don't want to update the background. This is the same
-                        //as updating it after copying that part of the current background image
-                        //into the forground
-                        IppiROI roi = new IppiROI(b.BoundingBox.x,b.BoundingBox.y,b.BoundingBox.width,b.BoundingBox.height);
-                        ip.ippiCopy_8u_C1R(currentBG[roi.TopLeft], currentBG.Stride, _cache[roi.TopLeft], _cache.Stride, roi.Size);
+                        IppiROI roi = new IppiROI(b.BoundingBox.x, b.BoundingBox.y, b.BoundingBox.width, b.BoundingBox.height);
+                        ip.ippiSet_8u_C1R(0, _updateMask[roi.TopLeft], _updateMask.Stride, roi.Size);
                     }
                 }
-                UpdateBackground(_cache);
+
+                IppHelper.IppCheckCall(cv.ippiAddWeighted_8u32f_C1IMR(im.Image, im.Stride, _updateMask.Image, _updateMask.Stride, background.Image, background.Stride, im.Size, FractionUpdate));
             }
         }
 
@@ -89,23 +84,17 @@ namespace MHApi.Imaging
                 UpdateBackground(im);
             else
             {
-                Image8 currentBG = Background;//cache it so the 8-bit representation does not get created multiple times
-                ip.ippiCopy_8u_C1R(im.Image, im.Stride, _cache.Image, _cache.Stride, im.Size);             
-                    if (regionToExclude != null)
-                    {
-                        //for each blob we don't want to update the background. This is the same
-                        //as updating it after copying that part of the current background image
-                        //into the forground
-                        IppiROI roi = new IppiROI(regionToExclude.BoundingBox.x,regionToExclude.BoundingBox.y,regionToExclude.BoundingBox.width,regionToExclude.BoundingBox.height);
-                        ip.ippiCopy_8u_C1R(currentBG[roi.TopLeft], currentBG.Stride, _cache[roi.TopLeft], _cache.Stride, roi.Size);
-                    }
-                UpdateBackground(_cache);
+                //reset our mask to <update all>, then fill bounding box with 0s
+                ip.ippiSet_8u_C1R(byte.MaxValue, _updateMask.Image, _updateMask.Stride, _updateMask.Size);
+                IppiROI roi = new IppiROI(regionToExclude.BoundingBox.x, regionToExclude.BoundingBox.y, regionToExclude.BoundingBox.width, regionToExclude.BoundingBox.height);
+                ip.ippiSet_8u_C1R(0, _updateMask[roi.TopLeft], _updateMask.Stride, roi.Size);
+                IppHelper.IppCheckCall(cv.ippiAddWeighted_8u32f_C1IMR(im.Image, im.Stride, _updateMask.Image, _updateMask.Stride, background.Image, background.Stride, im.Size, FractionUpdate));
             }
         }
 
         public override void Dispose()
         {
-            _cache.Dispose();
+            _updateMask.Dispose();
             base.Dispose();
         }
     }
