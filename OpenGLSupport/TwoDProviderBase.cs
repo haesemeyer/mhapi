@@ -15,6 +15,18 @@ namespace MHApi.OpenGLSupport
     /// </summary>
     public abstract class TwoDProviderBase : IOpenGLDrawingProvider
     {
+        /// <summary>
+        /// The viewport spans dimension from -Halfsize to +Halfsize
+        /// with the origin in the center
+        /// </summary>
+        public const float ViewportHalfSizeX = 8.0f;
+
+        /// <summary>
+        /// The viewport spans dimension from -Halfsize to +Halfsize
+        /// with the origin in the center
+        /// </summary>
+        public const float ViewportHalfSizeY = 6.0f;
+
         public virtual void Draw(OpenGL gl)
         {
             //move back to origin
@@ -39,7 +51,7 @@ namespace MHApi.OpenGLSupport
             //but constrained by the projectors aspect ratio!
             //with the origin in the middle (for rotation ease)
             //x pointing right, y pointing down
-            gl.Ortho2D(-8.0f, 8.0f, 6.0f, -6.0f);
+            gl.Ortho2D(-1 * ViewportHalfSizeX, ViewportHalfSizeX, ViewportHalfSizeY, -1 * ViewportHalfSizeY);
 
             //Load modelview
             gl.MatrixMode(MatrixMode.Modelview);
