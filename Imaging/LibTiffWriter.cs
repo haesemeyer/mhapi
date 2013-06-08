@@ -44,6 +44,11 @@ namespace MHApi.Imaging
         /// </summary>
         int _pageIndex;
 
+        /// <summary>
+        /// Our managed writing buffer
+        /// </summary>
+        byte[] _buffer;
+
         #endregion
 
         #region Constructor
@@ -156,11 +161,12 @@ namespace MHApi.Imaging
             _tiffFile.SetField(TiffTag.SAMPLESPERPIXEL, 1);
             _tiffFile.SetField(TiffTag.ROWSPERSTRIP, frame.Height);
             _tiffFile.SetField(TiffTag.SUBFILETYPE, FileType.PAGE);
-            byte[] rowBuffer = new byte[frame.Width * 2];
+            if (_buffer == null || _buffer.Length != frame.Height * frame.Stride)
+                _buffer = new byte[frame.Height * frame.Stride];
+            Marshal.Copy((IntPtr)frame.Image, _buffer, 0, frame.Stride * frame.Height);
             for (int row = 0; row < frame.Height; row++)
             {
-                Marshal.Copy((IntPtr)frame[0, row], rowBuffer, 0, frame.Width * 2);
-                _tiffFile.WriteScanline(rowBuffer, row);
+                _tiffFile.WriteScanline(_buffer, row * frame.Stride, row, 0);
             }
             _tiffFile.WriteDirectory();
         }
@@ -177,11 +183,12 @@ namespace MHApi.Imaging
             _tiffFile.SetField(TiffTag.SAMPLESPERPIXEL, 1);
             _tiffFile.SetField(TiffTag.ROWSPERSTRIP, frame.Height);
             _tiffFile.SetField(TiffTag.SUBFILETYPE, FileType.PAGE);
-            byte[] rowBuffer = new byte[frame.Width];
+            if (_buffer == null || _buffer.Length != frame.Height * frame.Stride)
+                _buffer = new byte[frame.Height * frame.Stride];
+            Marshal.Copy((IntPtr)frame.Image, _buffer, 0, frame.Stride * frame.Height);
             for (int row = 0; row < frame.Height; row++)
             {
-                Marshal.Copy((IntPtr)frame[0,row], rowBuffer, 0, frame.Width);
-                _tiffFile.WriteScanline(rowBuffer, row);
+                _tiffFile.WriteScanline(_buffer, row * frame.Stride, row, 0);
             }
             _tiffFile.WriteDirectory();
         }
