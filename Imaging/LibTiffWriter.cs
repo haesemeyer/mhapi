@@ -13,6 +13,9 @@ namespace MHApi.Imaging
 {
     public unsafe class LibTiffWriter : IDisposable
     {
+
+       
+
         #region Fields
 
         /// <summary>
@@ -73,6 +76,40 @@ namespace MHApi.Imaging
 
         #region Methods
 
+        public void WriteFrame(Image16 frame)
+        {
+            //if this is the first frame of the current file
+            //we have to create the file
+            if (_firstFrame)
+            {
+                System.Diagnostics.Debug.Assert(_tiffFile == null, "Tried first write but tiffile not null");
+                _pageIndex = 0;
+                _tiffFile = Tiff.Open(CurrentFileNameWithExtension, "w");
+                //write first page
+                WritePage(frame);
+                //increment page index
+                _pageIndex++;
+                _firstFrame = false;
+            }
+            else
+            {
+                //TiffStream stream = _tiffFile.GetStream();
+                if (new FileInfo(CurrentFileNameWithExtension).Length > 1900000000)//limit file size for MATLABs sake
+                {
+                    _fileIndex++;
+                    _firstFrame = true;
+                    _tiffFile.Dispose();
+                    _tiffFile = null;
+                    WriteFrame(frame);
+                    return;
+                }//if file size maxed out
+                //write next page
+                WritePage(frame);
+                //increment page index
+                _pageIndex++;
+            }
+        }
+
         public void WriteFrame(Image8 frame)
         {
             //if this is the first frame of the current file
@@ -91,7 +128,7 @@ namespace MHApi.Imaging
             else
             {
                 //TiffStream stream = _tiffFile.GetStream();
-                if (new FileInfo(CurrentFileNameWithExtension).Length > 2000000000)//limit file size for MATLABs sake
+                if (new FileInfo(CurrentFileNameWithExtension).Length > 1900000000)//limit file size for MATLABs sake
                 {
                     _fileIndex++;
                     _firstFrame = true;
@@ -107,21 +144,43 @@ namespace MHApi.Imaging
             }
         }
 
+        /// <summary>
+        /// Writes a 16-bit greyscale image to a multipage tiff file.
+        /// </summary>
+        /// <param name="frame">The 16-bit greyscale image to write</param>
+        void WritePage(Image16 frame)
+        {
+            _tiffFile.SetField(TiffTag.IMAGEWIDTH, frame.Width);
+            _tiffFile.SetField(TiffTag.IMAGELENGTH, frame.Height);
+            _tiffFile.SetField(TiffTag.BITSPERSAMPLE, 16);
+            _tiffFile.SetField(TiffTag.SAMPLESPERPIXEL, 1);
+            _tiffFile.SetField(TiffTag.ROWSPERSTRIP, frame.Height);
+            _tiffFile.SetField(TiffTag.SUBFILETYPE, FileType.PAGE);
+            byte[] rowBuffer = new byte[frame.Width * 2];
+            for (int row = 0; row < frame.Height; row++)
+            {
+                Marshal.Copy((IntPtr)frame[0, row], rowBuffer, 0, frame.Width * 2);
+                _tiffFile.WriteScanline(rowBuffer, row);
+            }
+            _tiffFile.WriteDirectory();
+        }
+
+        /// <summary>
+        /// Writes an 8-bit greyscale image to a multipage tiff file.
+        /// </summary>
+        /// <param name="frame">The 8-bit greyscale image to write</param>
         void WritePage(Image8 frame)
         {
-            //The following assumes that stride==width, ie. that all data in the
-            //image buffer belongs to the actual image!!
-            _tiffFile.SetField(TiffTag.COMPRESSION, Compression.LZW);
-            _tiffFile.SetField(TiffTag.IMAGEWIDTH, frame.Stride);
+            _tiffFile.SetField(TiffTag.IMAGEWIDTH, frame.Width);
             _tiffFile.SetField(TiffTag.IMAGELENGTH, frame.Height);
             _tiffFile.SetField(TiffTag.BITSPERSAMPLE, 8);
             _tiffFile.SetField(TiffTag.SAMPLESPERPIXEL, 1);
             _tiffFile.SetField(TiffTag.ROWSPERSTRIP, frame.Height);
             _tiffFile.SetField(TiffTag.SUBFILETYPE, FileType.PAGE);
-            byte[] rowBuffer = new byte[frame.Stride];
+            byte[] rowBuffer = new byte[frame.Width];
             for (int row = 0; row < frame.Height; row++)
             {
-                Marshal.Copy((IntPtr)frame[0,row], rowBuffer, 0, frame.Stride);
+                Marshal.Copy((IntPtr)frame[0,row], rowBuffer, 0, frame.Width);
                 _tiffFile.WriteScanline(rowBuffer, row);
             }
             _tiffFile.WriteDirectory();
