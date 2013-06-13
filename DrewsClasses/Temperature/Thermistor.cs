@@ -55,7 +55,7 @@ namespace MHApi.DrewsClasses.Temperature{
         /// <param name="daq">The daq-board for reading the thermistor</param>
         /// <param name="channelName">The ai channel readint the thermistor bridge</param>
         /// <param name="type">The type of the thermistor</param>
-        public Thermistor(PCIe6323 daq, string channelName, ThermistorType type = ThermistorType.Omega) {
+        public Thermistor(PCIe6323 daq, string channelName, ThermistorType type) {
             if (ViewModelBase.IsInDesignMode) {
                 Temperature = 12.3456789;
                 return;
