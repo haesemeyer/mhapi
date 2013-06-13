@@ -12,16 +12,23 @@ using MHApi.Utilities;
 namespace MHApi.DrewsClasses {
     public class PCIe6323 : IDisposable {
 
-        
+        public enum AIReadTriggerType { None, AO, External };
 
         string _deviceName;
 
-        public PCIe6323(string deviceName) {
+        /// <summary>
+        /// Determines whether and how ai-reading will depend on a trigger signal
+        /// Having this static is fine as long as there is only one board maximum in use!!
+        /// </summary>
+        public static AIReadTriggerType AiReadTrigger;
+
+        public PCIe6323(string deviceName, AIReadTriggerType aiReadTrigger) {
             AI = new AIType(deviceName);
             AO = new AOType(deviceName);
             DO = new DOType(deviceName);
             CO = new COType(deviceName);
             _deviceName = deviceName;
+            AiReadTrigger = aiReadTrigger;
         }
 
         public AIType AI { get; private set; }
@@ -101,13 +108,9 @@ namespace MHApi.DrewsClasses {
                 {
                     int i, j;
                     var channels = new[] { AI0, AI1, AI2, AI3, AI4, AI5, AI6, AI7 };//need to add additional channels here
-#if aoSync
-                    streamingTask = new Task(deviceName + " AI Streaming Task");//setting a ao trigger for this task will synchronize the reading with the writing
-                    //of ao samples
-#else
-                    streamingTask = new Task(deviceName + " AI Streaming Task");//setting a trigger for this task should allow to synchronize temperature reading
-                    //with frame grabbing see below
-#endif
+
+                    //depending on our trigger setting this task will not be triggered, triggered by our TriggeredTask mechanism, or by ao generation start - see code below
+                    streamingTask = new Task(deviceName + " AI Streaming Task");
                     
 
 
@@ -143,14 +146,17 @@ namespace MHApi.DrewsClasses {
                     long sampleIndex = 0;
                     double elapsed;
                     sampleIndex = 0;
-#if aoSync
-                    //We wait for the analog out to be ready
-                    streamingTask.Triggers.StartTrigger.ConfigureDigitalEdgeTrigger("ao/StartTrigger", DigitalEdgeStartTriggerEdge.Rising);
-#else
-                    //We wait for trigger pulse on Digital Port 1 line 0
-                    streamingTask.Triggers.StartTrigger.ConfigureDigitalEdgeTrigger("PFI0", DigitalEdgeStartTriggerEdge.Rising);
+                    if (AiReadTrigger == AIReadTriggerType.AO)
+                    {
+                        //We wait for the analog out to be ready
+                        streamingTask.Triggers.StartTrigger.ConfigureDigitalEdgeTrigger("ao/StartTrigger", DigitalEdgeStartTriggerEdge.Rising);
+                    }
+                    else if (AiReadTrigger == AIReadTriggerType.External)
+                    {
+                        //We wait for trigger pulse on Digital Port 1 line 0
+                        streamingTask.Triggers.StartTrigger.ConfigureDigitalEdgeTrigger("PFI0", DigitalEdgeStartTriggerEdge.Rising);
+                    }
 
-#endif
 
                     streamingTask.Start();
 
