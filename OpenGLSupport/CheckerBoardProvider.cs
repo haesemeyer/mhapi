@@ -39,13 +39,7 @@ namespace MHApi.OpenGLSupport
         /// <summary>
         /// Default constructor
         /// </summary>
-        public CheckerBoardProvider()
-        {
-            Color1 = FColor.Red;
-            Color2 = FColor.Black;
-            CheckerWidth = 0.5f;
-            CheckerHeight = 0.5f;
-        }
+        public CheckerBoardProvider() : this(FColor.Red,FColor.Black,0.5f,0.5f) {}
 
         public CheckerBoardProvider(FColor color1, FColor color2, float checkerWidth, float checkerHeight)
         {
