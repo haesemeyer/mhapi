@@ -275,6 +275,7 @@ namespace MHApi.PIDController
             _sensor = sensor;
             _sensor.ValueChanged += ControlLoop;
             _effector = effector;
+            _effector.Start();
             KP = kP;
             KI = kI;
             UpdateStep = updateStep;
@@ -309,6 +310,7 @@ namespace MHApi.PIDController
                 if (newValue <= _maxSystemValue && newValue >= _minSystemValue)
                 {
                     _limitFault = false;
+                    _effector.Start();
                     System.Diagnostics.Debug.WriteLine("Recovered from limit fault in controller" + _id);
                 }
                 else
@@ -375,10 +377,15 @@ namespace MHApi.PIDController
         {
             if (IsDisposed)
                 return;
+            Dispose(true);
+            IsDisposed = true;
+        }
+
+        protected virtual void Dispose(bool isDisposing)
+        {
             if (IsRunning)
                 Stop();
             _sensor.ValueChanged -= ControlLoop;
-            IsDisposed = true;
         }
 
         #endregion
