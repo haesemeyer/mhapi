@@ -5,7 +5,7 @@ using System.Text;
 
 namespace MHApi.PIDController
 {
-    public abstract class Effector
+    public abstract class Effector : IDisposable
     {
         /// <summary>
         /// The maximum desired output on the effector system
@@ -31,7 +31,7 @@ namespace MHApi.PIDController
             {
                 return _maxOutput;
             }
-            protected set
+            set
             {
                 _maxOutput = value;
             }
@@ -46,7 +46,7 @@ namespace MHApi.PIDController
             {
                 return _minOutput;
             }
-            protected set
+            set
             {
                 _minOutput = value;
             }
@@ -100,5 +100,23 @@ namespace MHApi.PIDController
         /// and startup routines
         /// </summary>
         public abstract void Start();
+
+        #region IDisposable
+
+        public bool IsDisposed { get; private set; }
+
+        public void Dispose()
+        {
+            if (!IsDisposed)
+                Dispose(true);
+            IsDisposed = true;
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            Stop();
+        }
+
+        #endregion
     }
 }
