@@ -257,7 +257,7 @@ namespace MHApi.DrewsClasses.Temperature{
         /// </summary>
         /// <param name="v">The measured voltage</param>
         /// <returns>The resistance of the thermistor</returns>
-        static double ConvertVToR(double v) {
+        public static double ConvertVToR(double v) {
             return RBridge * (vS - 2 * v) / (vS + 2 * v);
         }
 
@@ -268,7 +268,7 @@ namespace MHApi.DrewsClasses.Temperature{
         /// <param name="r">The measured resistance</param>
         /// <param name="type">The type of thermistor</param>
         /// <returns>The temperature of the thermistor</returns>
-        static double ConvertRToT(double r, ThermistorType type) {
+        public static double ConvertRToT(double r, ThermistorType type) {
             switch (type)
             {
                 case (ThermistorType.Warner):
