@@ -70,7 +70,7 @@ namespace MHApi.PIDController
         /// <param name="pwmCounterOutput">The pin on which to generate the output</param>
         public PWMResistiveHeater(string deviceName, string pwmCounterName, string pwmCounterOutput)
         {
-            MinOutput = 0.0001;
+            MinOutput = 0.001;
             //By default limit maximum duty cycle of this
             //heater to 50%
             MaxOutput = 0.5;
@@ -78,7 +78,7 @@ namespace MHApi.PIDController
             _pwmSignal = new CODataFrequency(500, MinOutput);
             string connection = deviceName + "/" + pwmCounterName;
             //create our pwm task, set up a counter channelr on the output pin and configure it to run until stopped
-            _pwmTask = new Task("ResistiveHeater_"+connection);
+            _pwmTask = new Task("ResistiveHeater_" + deviceName + pwmCounterName);
             _pwmTask.COChannels.CreatePulseChannelFrequency(connection, "", COPulseFrequencyUnits.Hertz, COPulseIdleState.Low, 0, _pwmSignal.Frequency, _pwmSignal.DutyCycle);
             _pwmTask.Timing.ConfigureImplicit(SampleQuantityMode.ContinuousSamples);
             _pwmTask.ExportSignals.CounterOutputEventOutputTerminal = pwmCounterOutput;
