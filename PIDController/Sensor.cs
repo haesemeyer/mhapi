@@ -20,13 +20,13 @@ namespace MHApi.PIDController
         /// The value currently sensed
         /// by the sensor
         /// </summary>
-        protected virtual double Value
+        public virtual double Value
         {
             get
             {
                 return _value;
             }
-            set
+            protected set
             {
                 _value = value;
                 if (ValueChanged != null)

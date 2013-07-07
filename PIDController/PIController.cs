@@ -275,7 +275,6 @@ namespace MHApi.PIDController
             _sensor = sensor;
             _sensor.ValueChanged += ControlLoop;
             _effector = effector;
-            _effector.Start();
             KP = kP;
             KI = kI;
             UpdateStep = updateStep;
