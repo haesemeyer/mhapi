@@ -326,7 +326,7 @@ namespace MHApi.PIDController
                 return;
             }
             //compute current error
-            double error = _target - newValue;
+            double error = _setPoint - newValue;
             _integralOfError += error;
             //detect integral fault
             if (Math.Abs(_integralOfError) > _maxIntegralError)
@@ -340,8 +340,14 @@ namespace MHApi.PIDController
             _effector.Output = error * _kP + _integralOfError * _kI;
         }
 
+        /// <summary>
+        /// Start up the controller with a new initial setpoint
+        /// </summary>
+        /// <param name="initialTarget">The initial immediate setpoint</param>
         public void Start(double initialTarget)
         {
+            if(IsRunning)
+                return;
             if (IsDisposed)
                 throw new ObjectDisposedException("PIController");
             Target = initialTarget;
@@ -351,10 +357,20 @@ namespace MHApi.PIDController
             IsRunning = true;
         }
 
+        /// <summary>
+        /// Restart the controller at the current setpoint
+        /// </summary>
+        public void Restart()
+        {
+            Start(_setPoint);
+        }
+
         public void Stop()
         {
             if (IsDisposed)
                 throw new ObjectDisposedException("PIController");
+            if(!IsRunning)
+                return;
             _effector.Stop();
             IsRunning = false;
         }
