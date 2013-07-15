@@ -424,6 +424,9 @@ namespace MHApi.PIDController
             //value is set too stringent effectively disabling the controller!
             double errorDelta = Math.Abs(_delta.Value) - _acceptableDelta;
             _constraintIOE += errorDelta;
+            //our integral of the constraint should not get negative!
+            if (_constraintIOE < 0)
+                _constraintIOE = 0;
             //detect integral fault
             if (Math.Abs(_integralOfError) > _maxIntegralError)
             {
@@ -432,6 +435,9 @@ namespace MHApi.PIDController
                 _integralFault = true;
                 return;
             }
+            //a negative errorDelta should not impact the output
+            if (errorDelta < 0)
+                errorDelta = 0;
             //update the output on the effector
             _effector.Output = error * _kP + _integralOfError * _kI - errorDelta * _kPConstraint - _constraintIOE * _kIConstraint;
         }
