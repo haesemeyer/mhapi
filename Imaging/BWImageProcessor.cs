@@ -103,15 +103,12 @@ namespace MHApi.Imaging
         /// <param name="imClosed">The image after the closing operation</param>
         /// <param name="imCalc">Intermediate image for semi-processed version</param>
         /// <param name="region">The ROI in which to perform the operation</param>
-        public static void Close3x3(Image8 imIn, Image8 imClosed , Image8 imCalc, IppiROI region)
+        public static void Close3x3(Image8 imIn, Image8 imClosed , Image8 imCalc, IppiROI roi)
         {
             //Modify region we operate on to allow mask overhang
-            region.X += 1;
-            region.Y += 1;
-            region.Width -= 3;
-            region.Height -= 3;
-            IppHelper.IppCheckCall(ip.ippiDilate3x3_8u_C1R(imIn[region.TopLeft], imIn.Stride, imCalc[region.TopLeft], imCalc.Stride, region.Size));
-            IppHelper.IppCheckCall(ip.ippiErode3x3_8u_C1R(imCalc[region.TopLeft], imCalc.Stride, imClosed[region.TopLeft], imClosed.Stride, region.Size));
+            var inner = new IppiROI(roi.X + 1, roi.Y + 1, roi.Width - 3, roi.Height - 3);
+            IppHelper.IppCheckCall(ip.ippiDilate3x3_8u_C1R(imIn[inner.TopLeft], imIn.Stride, imCalc[inner.TopLeft], imCalc.Stride, inner.Size));
+            IppHelper.IppCheckCall(ip.ippiErode3x3_8u_C1R(imCalc[inner.TopLeft], imCalc.Stride, imClosed[inner.TopLeft], imClosed.Stride, inner.Size));
         }
 
         /// <summary>
@@ -123,15 +120,12 @@ namespace MHApi.Imaging
         /// <param name="imCalc">Intermediate buffer for processing</param>
         /// <param name="neighborhood">The mask for the closing operation</param>
         /// <param name="region">The image region in which to perform the operation</param>
-        public static void Close(Image8 imIn, Image8 imClosed, Image8 imCalc, MorphologyMask neighborhood, IppiROI region)
+        public static void Close(Image8 imIn, Image8 imClosed, Image8 imCalc, MorphologyMask neighborhood, IppiROI roi)
         {
             //Modify region we operate on to allow mask overhang
-            region.X += neighborhood.Anchor.x;
-            region.Y += neighborhood.Anchor.y;
-            region.Width -= neighborhood.Mask.Width;
-            region.Height -= neighborhood.Mask.Height;
-            IppHelper.IppCheckCall(ip.ippiDilate_8u_C1R(imIn[region.TopLeft], imIn.Stride, imCalc[region.TopLeft], imCalc.Stride, region.Size, neighborhood.Mask.Image, neighborhood.Mask.Size, neighborhood.Anchor));
-            IppHelper.IppCheckCall(ip.ippiErode_8u_C1R(imCalc[region.TopLeft], imCalc.Stride, imClosed[region.TopLeft], imClosed.Stride, region.Size, neighborhood.Mask.Image, neighborhood.Mask.Size, neighborhood.Anchor));
+            var inner = new IppiROI(roi.X + neighborhood.Anchor.x, roi.Y + neighborhood.Anchor.y, roi.Width - neighborhood.Mask.Width, roi.Height - neighborhood.Mask.Height);
+            IppHelper.IppCheckCall(ip.ippiDilate_8u_C1R(imIn[inner.TopLeft], imIn.Stride, imCalc[inner.TopLeft], imCalc.Stride, inner.Size, neighborhood.Mask.Image, neighborhood.Mask.Size, neighborhood.Anchor));
+            IppHelper.IppCheckCall(ip.ippiErode_8u_C1R(imCalc[inner.TopLeft], imCalc.Stride, imClosed[inner.TopLeft], imClosed.Stride, inner.Size, neighborhood.Mask.Image, neighborhood.Mask.Size, neighborhood.Anchor));
         }
 
         /// <summary>
@@ -141,15 +135,12 @@ namespace MHApi.Imaging
         /// <param name="imOpened">The image after the opening operation</param>
         /// <param name="imCalc">Intermediate image for semi-processed version</param>
         /// <param name="region">The ROI in which to perform the operation</param>
-        public static void Open3x3(Image8 imIn, Image8 imOpened, Image8 imCalc, IppiROI region)
+        public static void Open3x3(Image8 imIn, Image8 imOpened, Image8 imCalc, IppiROI roi)
         {
             //Modify region we operate on to allow mask overhang
-            region.X += 1;
-            region.Y += 1;
-            region.Width -= 3;
-            region.Height -= 3;           
-            IppHelper.IppCheckCall(ip.ippiErode3x3_8u_C1R(imCalc[region.TopLeft], imCalc.Stride, imOpened[region.TopLeft], imOpened.Stride, region.Size));
-            IppHelper.IppCheckCall(ip.ippiDilate3x3_8u_C1R(imIn[region.TopLeft], imIn.Stride, imCalc[region.TopLeft], imCalc.Stride, region.Size));
+            var inner = new IppiROI(roi.X + 1, roi.Y + 1, roi.Width - 3, roi.Height - 3);      
+            IppHelper.IppCheckCall(ip.ippiErode3x3_8u_C1R(imCalc[inner.TopLeft], imCalc.Stride, imOpened[inner.TopLeft], imOpened.Stride, inner.Size));
+            IppHelper.IppCheckCall(ip.ippiDilate3x3_8u_C1R(imIn[inner.TopLeft], imIn.Stride, imCalc[inner.TopLeft], imCalc.Stride, inner.Size));
         }
 
         /// <summary>
@@ -161,15 +152,12 @@ namespace MHApi.Imaging
         /// <param name="imCalc">Intermediate buffer for processing</param>
         /// <param name="neighborhood">The mask for the opening operation</param>
         /// <param name="region">The image region in which to perform the operation</param>
-        public static void Open(Image8 imIn, Image8 imOpened, Image8 imCalc, MorphologyMask neighborhood, IppiROI region)
+        public static void Open(Image8 imIn, Image8 imOpened, Image8 imCalc, MorphologyMask neighborhood, IppiROI roi)
         {
             //Modify region we operate on to allow mask overhang
-            region.X += neighborhood.Anchor.x;
-            region.Y += neighborhood.Anchor.y;
-            region.Width -= neighborhood.Mask.Width;
-            region.Height -= neighborhood.Mask.Height;            
-            IppHelper.IppCheckCall(ip.ippiErode_8u_C1R(imIn[region.TopLeft], imIn.Stride, imCalc[region.TopLeft], imCalc.Stride, region.Size, neighborhood.Mask.Image, neighborhood.Mask.Size, neighborhood.Anchor));
-            IppHelper.IppCheckCall(ip.ippiDilate_8u_C1R(imCalc[region.TopLeft], imCalc.Stride, imOpened[region.TopLeft], imOpened.Stride, region.Size, neighborhood.Mask.Image, neighborhood.Mask.Size, neighborhood.Anchor));
+            var inner = new IppiROI(roi.X + neighborhood.Anchor.x, roi.Y + neighborhood.Anchor.y, roi.Width - neighborhood.Mask.Width, roi.Height - neighborhood.Mask.Height);         
+            IppHelper.IppCheckCall(ip.ippiErode_8u_C1R(imIn[inner.TopLeft], imIn.Stride, imCalc[inner.TopLeft], imCalc.Stride, inner.Size, neighborhood.Mask.Image, neighborhood.Mask.Size, neighborhood.Anchor));
+            IppHelper.IppCheckCall(ip.ippiDilate_8u_C1R(imCalc[inner.TopLeft], imCalc.Stride, imOpened[inner.TopLeft], imOpened.Stride, inner.Size, neighborhood.Mask.Image, neighborhood.Mask.Size, neighborhood.Anchor));
         }
 
         /// <summary>
