@@ -92,6 +92,8 @@ namespace MHApi.DrewsClasses {
             Image = (byte*)Marshal.AllocHGlobal(Stride * height).ToPointer();
         }
 
+        public Image8(IppiSize imageSize) : this(imageSize.width, imageSize.height) { }
+
         /*public void FromImage16(Image16 im, float cMax) {
             if (im.Width != Width || im.Height != Height)
                 throw new NotImplementedException("Width and Height must match");
