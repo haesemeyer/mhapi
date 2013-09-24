@@ -105,6 +105,11 @@ namespace MHApi.Tracking
         IppiROI _trackRegionOuter;
 
         /// <summary>
+        /// Thread-safety of region updates
+        /// </summary>
+        object _regionLock = new object();
+
+        /// <summary>
         /// The computed background
         /// </summary>
         Image8 _background;
@@ -179,6 +184,12 @@ namespace MHApi.Tracking
         /// positive angles that contain foreground
         /// </summary>
         int* _angleStore;
+
+        /// <summary>
+        /// Whenever coordinates or parameters change
+        /// we want to refresh the background
+        /// </summary>
+        bool _bgValid;
 
         /// <summary>
         /// The tail angle at which we start to scan (-90 degrees)
@@ -464,50 +475,54 @@ namespace MHApi.Tracking
         /// </summary>
         private void DefineTrackRegions()
         {
-            int startx, starty, width, height;
-            //determine if tail is horizontal or vertical
-            if (TailIsVertical())
+            lock (_regionLock)
             {
-                starty = TailStart.y < TailEnd.y ? TailStart.y : TailEnd.y;
-                height = Math.Abs(TailEnd.y - TailStart.y);
-                startx = (int)((TailStart.x + TailEnd.x) / 2 - height);//ROI is centered around the tail
-                width = 2* height;
+                int startx, starty, width, height;
+                //determine if tail is horizontal or vertical
+                if (TailIsVertical())
+                {
+                    starty = TailStart.y < TailEnd.y ? TailStart.y : TailEnd.y;
+                    height = Math.Abs(TailEnd.y - TailStart.y);
+                    startx = (int)((TailStart.x + TailEnd.x) / 2 - height);//ROI is centered around the tail
+                    width = 2 * height;
+                }
+                else
+                {
+                    startx = TailStart.x < TailEnd.x ? TailStart.x : TailEnd.x;
+                    width = Math.Abs(TailEnd.x - TailStart.x);
+                    starty = (int)((TailStart.y + TailEnd.y) / 2 - width);
+                    height = 2 * width;
+                }
+                //trim to fit into image dimensions
+                if (startx < 0)
+                    startx = 0;
+                if (starty < 0)
+                    starty = 0;
+                if (startx + width > _imageSize.width)
+                    width = _imageSize.width - startx + 1;
+                if (starty + height > _imageSize.height)
+                    height = _imageSize.height - starty + 1;
+                //compute and trim outer coordinates - morphological operations need to leave
+                //border pixels and don't compute anything useful within the border for those
+                //border pixels - therefore we leave a border twice the size of our structuring
+                //element
+                int outerx = startx - 2 * _strel.Anchor.x;
+                int outery = starty - 2 * _strel.Anchor.y;
+                int outerw = width + 2 * _strel.Mask.Width;
+                int outerh = height + 2 * _strel.Mask.Height;
+                if (outerx < 0)
+                    outerx = 0;
+                if (outery < 0)
+                    outery = 0;
+                if (outerx + outerw > _imageSize.width)
+                    outerw = _imageSize.width - outerx + 1;
+                if (outery + outerh > _imageSize.height)
+                    outerh = _imageSize.height - outery + 1;
+                //create regions
+                _trackRegionInner = new IppiROI(startx, starty, width, height);
+                _trackRegionOuter = new IppiROI(outerx, outery, outerw, outerh);
             }
-            else
-            {
-                startx = TailStart.x < TailEnd.x ? TailStart.x : TailEnd.x;
-                width = Math.Abs(TailEnd.x - TailStart.x);
-                starty = (int)((TailStart.y + TailEnd.y) / 2 - width);
-                height = 2 * width;
-            }
-            //trim to fit into image dimensions
-            if (startx < 0)
-                startx = 0;
-            if (starty < 0)
-                starty = 0;
-            if (startx + width > _imageSize.width)
-                width = _imageSize.width - startx + 1;
-            if (starty + height > _imageSize.height)
-                height = _imageSize.height - starty + 1;
-            //compute and trim outer coordinates - morphological operations need to leave
-            //border pixels and don't compute anything useful within the border for those
-            //border pixels - therefore we leave a border twice the size of our structuring
-            //element
-            int outerx = startx - 2 * _strel.Anchor.x;
-            int outery = starty - 2* _strel.Anchor.y;
-            int outerw = width + 2 * _strel.Mask.Width;
-            int outerh = height + 2 * _strel.Mask.Height;
-            if (outerx < 0)
-                outerx = 0;
-            if (outery < 0)
-                outery = 0;
-            if (outerx + outerw > _imageSize.width)
-                outerw = _imageSize.width - outerx + 1;
-            if (outery + outerh > _imageSize.height)
-                outerh = _imageSize.height - outery + 1;
-            //create regions
-            _trackRegionInner = new IppiROI(startx, starty, width, height);
-            _trackRegionOuter = new IppiROI(outerx, outery, outerw, outerh);
+            _bgValid = false;
         }
 
         /// <summary>
@@ -523,6 +538,15 @@ namespace MHApi.Tracking
         }
 
         /// <summary>
+        /// Forces the tracker to update the background
+        /// at the next frame
+        /// </summary>
+        public void ForceBGUpdate()
+        {
+            _bgValid = false;
+        }
+
+        /// <summary>
         /// Tracks the tailsegments on the supplied image and returns
         /// the angles and distances of each segment from the tailstart
         /// </summary>
@@ -530,15 +554,29 @@ namespace MHApi.Tracking
         /// <returns>NSegments number of TailPoints</returns>
         public TailPoint[] TrackTail(Image8 image)
         {
-            //CURRENTLY ONLY DOWNWARD FACING TAILS ARE PROPERLY SUPPORTED!!!
-            //Generate background by closing operation - once a second
-            if(_frameNumber % _frameRate == 0)
-                BWImageProcessor.Close(image, _background, _calc1, _strel, _trackRegionOuter);
-            //Compute foreground
-            IppHelper.IppCheckCall(cv.ippiAbsDiff_8u_C1R(_background[_trackRegionInner.TopLeft], _background.Stride, image[_trackRegionInner.TopLeft], image.Stride, _foreground[_trackRegionInner.TopLeft], _foreground.Stride, _trackRegionInner.Size));
-            //Threshold
-            BWImageProcessor.Im2Bw(_foreground, _thresholded, _trackRegionInner, _threshold);
-            
+            lock (_regionLock)
+            {
+                //CURRENTLY ONLY DOWNWARD FACING TAILS ARE PROPERLY SUPPORTED!!!
+                //Generate background by closing operation - once a second or whenever our coordinates changed
+                if (_frameNumber % _frameRate == 0 || !_bgValid)
+                {
+                    if (!_bgValid)
+                    {
+                        //if our regions changed, reblank our images!
+                        ip.ippiSet_8u_C1R(0, _background.Image, _background.Stride, _background.Size);
+                        ip.ippiSet_8u_C1R(0, _foreground.Image, _foreground.Stride, _foreground.Size);
+                        ip.ippiSet_8u_C1R(0, _thresholded.Image, _thresholded.Stride, _thresholded.Size);
+                    }
+                    BWImageProcessor.Close(image, _background, _calc1, _strel, _trackRegionOuter);
+                    _bgValid = true;
+                }
+                //Compute foreground
+                IppHelper.IppCheckCall(cv.ippiAbsDiff_8u_C1R(_background[_trackRegionInner.TopLeft], _background.Stride, image[_trackRegionInner.TopLeft], image.Stride, _foreground[_trackRegionInner.TopLeft], _foreground.Stride, _trackRegionInner.Size));
+                //Threshold
+                BWImageProcessor.Im2Bw(_foreground, _thresholded, _trackRegionInner, _threshold);
+                //Fill small holes
+                BWImageProcessor.Close3x3(_thresholded, _thresholded, _calc1, _trackRegionInner);
+            }
             //Tracking concept: Whenever new tail coordinates or segment numbers are defined
             //we compute for each segment in 0.2 degree steps all points on a -90 to +90 degree arc
             //and store the coordinates with the respective angles and radii
@@ -560,9 +598,13 @@ namespace MHApi.Tracking
                     {
                         if (_pointsToScan[j, i].Radius == 0)//have gone past the end of valid points
                             break;
+                        //If current point is outside of the image, ignore it
+                        IppiPoint pt = _pointsToScan[j, i].Coordinate;
+                        if (pt.x < 0 || pt.y < 0 || pt.x >= _imageSize.width || pt.y >= _imageSize.height)
+                            continue;
                         //if the value at the current point >0 we mark that angle as valid
                         //by storing the position in our anglestore
-                        if (*_thresholded[_pointsToScan[j, i].Coordinate] > 0)
+                        if (*_thresholded[pt] > 0)
                         {
                             _angleStore[pointsFound] = j;
                             pointsFound++;
