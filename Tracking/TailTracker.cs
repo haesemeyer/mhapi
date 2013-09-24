@@ -34,16 +34,24 @@ namespace MHApi.Tracking
             /// </summary>
             public double Distance;
 
+            /// <summary>
+            /// The cartesian tail coordinate
+            /// identified for this tail segment
+            /// </summary>
+            public IppiPoint Coordinate;
+
             
             /// <summary>
             /// Constructs a new tailpoit
             /// </summary>
             /// <param name="angle">The angle of the point</param>
             /// <param name="distance">The distance from tailstart</param>
-            public TailPoint(double angle, double distance)
+            /// <param name="coordinate">The cartesian coordinate of the tailpoint</param>
+            public TailPoint(double angle, double distance, IppiPoint coordinate)
             {
                 Angle = angle;
                 Distance = distance;
+                Coordinate = coordinate;
             }
         }
 
@@ -167,6 +175,12 @@ namespace MHApi.Tracking
         object _scanPointLock = new object();
 
         /// <summary>
+        /// During tracking used to store all
+        /// positive angles that contain foreground
+        /// </summary>
+        int* _angleStore;
+
+        /// <summary>
         /// The tail angle at which we start to scan (-90 degrees)
         /// </summary>
         const double ScanStartAngle = -1 * Math.PI / 2;
@@ -215,6 +229,8 @@ namespace MHApi.Tracking
             NSegments = nsegments;
             InitializeImageBuffers();//set up image buffers
             InitializeScanPoints();//create scan points appropriate for the tail parameters
+            //Initialize our angle store for tracking (size never changes)
+            _angleStore = (int*)System.Runtime.InteropServices.Marshal.AllocHGlobal(NAngles*4);
         }
 
         #endregion
@@ -527,13 +543,10 @@ namespace MHApi.Tracking
             //we compute for each segment in 0.2 degree steps all points on a -90 to +90 degree arc
             //and store the coordinates with the respective angles and radii
             //Depending on the actual distance we won't need all 900 points obviously so only
-            //unique coordinates get stored with the rest of the array empty (array will be 900xnSections in size)
+            //unique coordinates get stored with the rest of the array "empty" (array will be 900xnSections in size)
             //During tracking, for each segment we loop over the precomputed coordinates (until the first "empty" coordinate is reached)
-            //and store all pixels where the foreground is white. We do so starting from -90 to +90. Then we remove the first and last
-            //positive coordinate and compute the mean of the remainder
-            //(i.e. we store the sum, the number of points,
-            //the first positive coordinate (<=> min) and the last positive coordinate (<=> max), then subtract max and min from the sum
-            //and divide the sum by (npoints-2))
+            //and store all pixels where the foreground is white. Since the angles are inherently sorted (coming from a directional sweep)
+            //we can then easily retrieve the median coordinate
             var retval = new TailPoint[_nSegments];
             lock (_scanPointLock)
             {
@@ -543,39 +556,44 @@ namespace MHApi.Tracking
                     //loop over all scan-points, exiting loop if empty
                     //points are reached then find tail angle of this segment
                     int pointsFound = 0;//the number of non-zero pixels identified
-                    double angleSum = 0;//the sum of all positive angular positions
-                    double minAngle = -100;//the minimal angle that was positive
-                    double maxAngle = -100;//the maximal angle that was positive
                     for (int j = 0; j < NAngles; j++)
                     {
                         if (_pointsToScan[j, i].Radius == 0)//have gone past the end of valid points
                             break;
-                        //if the value at the current point >0 we take that angle - the first point also updates min angle and
-                        //each point found updates max-angle
+                        //if the value at the current point >0 we mark that angle as valid
+                        //by storing the position in our anglestore
                         if (*_thresholded[_pointsToScan[j, i].Coordinate] > 0)
                         {
-                            var a = _pointsToScan[j,i].Angle;
-                            if (minAngle == -100)
-                                minAngle = a;
-                            maxAngle = a;
-                            angleSum += a;
+                            _angleStore[pointsFound] = j;
                             pointsFound++;
                         }
                     }
                     //if we have more than two points, compute average after
                     //removeing the minimum and maximum
                     double tailAngle;
+                    IppiPoint coordinate;
                     if (pointsFound == 0)
+                    {
                         tailAngle = double.NaN;
+                        coordinate = new IppiPoint();
+                    }
                     else if (pointsFound < 3)
-                        tailAngle = angleSum / pointsFound;
+                    {
+                        tailAngle = _pointsToScan[_angleStore[0], i].Angle;
+                        coordinate = _pointsToScan[_angleStore[0], i].Coordinate;
+                    }
                     else
                     {
-                        angleSum -= (minAngle + maxAngle);
-                        pointsFound -= 2;
-                        tailAngle = angleSum / pointsFound;
+                        //we want the angle at the median position of valid points
+                        //we don't compute intermediate positions however (we should be able to afford this since our angle step is so small), so in case
+                        //of an even number of points, the top of the lower half currently
+                        //wins - since array indexing is zero based, we have to subtract 1
+                        //from the computed median position
+                        var pos = _angleStore[(int)(Math.Ceiling(pointsFound / 2.0) - 1)];
+                        tailAngle = _pointsToScan[pos, i].Angle;
+                        coordinate = _pointsToScan[pos, i].Coordinate;
                     }
-                    retval[i] = new TailPoint(tailAngle, _pointsToScan[0, i].Radius);
+                    retval[i] = new TailPoint(tailAngle, _pointsToScan[0, i].Radius, coordinate);
                 }
             }
             _frameNumber++;
@@ -616,6 +634,11 @@ namespace MHApi.Tracking
             {
                 _strel.Dispose();
                 _strel = null;
+            }
+            if (_angleStore != null)
+            {
+                System.Runtime.InteropServices.Marshal.FreeHGlobal((IntPtr)_angleStore);
+                _angleStore = null;
             }
         }
 
