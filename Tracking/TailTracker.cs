@@ -18,21 +18,17 @@ namespace MHApi.Tracking
     {
         /// <summary>
         /// Represents the tracking result
-        /// for one tail segment giving its angle and distance
-        /// from the tail-start
+        /// for one tail segment giving its angle relative
+        /// to the previous segment as well as its end-coordinate
         /// </summary>
-        public struct TailPoint
+        public struct TailSegment
         {
-            /// <summary>
-            /// The angle of the tailpoint
-            /// </summary>
-            public double Angle;
 
             /// <summary>
-            /// The distance of the point
-            /// from tailstart in pixels
+            /// The delta-angle relative
+            /// to the previous segment
             /// </summary>
-            public double Distance;
+            public double DeltaAngle;
 
             /// <summary>
             /// The cartesian tail coordinate
@@ -44,45 +40,18 @@ namespace MHApi.Tracking
             /// <summary>
             /// Constructs a new tailpoit
             /// </summary>
-            /// <param name="angle">The angle of the point</param>
+            /// <param name="angle">The angle of the segment on screen - 0degrees facing down</param>
+            /// <param name="deltaAngle">The delta angle to the previous segment</param>
             /// <param name="distance">The distance from tailstart</param>
             /// <param name="coordinate">The cartesian coordinate of the tailpoint</param>
-            public TailPoint(double angle, double distance, IppiPoint coordinate)
+            public TailSegment(double deltaAngle, IppiPoint coordinate)
             {
-                Angle = angle;
-                Distance = distance;
+                DeltaAngle = deltaAngle;
                 Coordinate = coordinate;
             }
         }
 
-        /// <summary>
-        /// Represents a point that should be testesd for the
-        /// presence of the tail during tracking
-        /// </summary>
-        private struct TailTestCoordinate
-        {
-            /// <summary>
-            /// The angle of this coordinate
-            /// </summary>
-            public double Angle;
-
-            /// <summary>
-            /// The radius of this coordinate
-            /// </summary>
-            public double Radius;
-
-            /// <summary>
-            /// The coordinate itself
-            /// </summary>
-            public IppiPoint Coordinate;
-
-            public TailTestCoordinate(double angle, double radius, IppiPoint coordinate)
-            {
-                Angle = angle;
-                Radius = radius;
-                Coordinate = coordinate;
-            }
-        }
+        
 
         #region Members
 
@@ -172,10 +141,22 @@ namespace MHApi.Tracking
         uint _frameNumber;
 
         /// <summary>
-        /// This 2D array contains all the points to scan
-        /// for each tail segment [NAngles,_nSegments]
+        /// The angles on the full scan-circle
+        /// that the probe for tail-presence
         /// </summary>
-        TailTestCoordinate[,] _pointsToScan;
+        double[] _scanAngles;
+
+        /// <summary>
+        /// For each _scanAngle the corresponding
+        /// coordinate offset in x and y
+        /// </summary>
+        IppiPoint[] _coordinateOffsets;
+
+        /// <summary>
+        /// The delta angle between two consecutive
+        /// _pointsToScan
+        /// </summary>
+        double _angleStep;
 
         object _scanPointLock = new object();
 
@@ -192,19 +173,16 @@ namespace MHApi.Tracking
         bool _bgValid;
 
         /// <summary>
-        /// The tail angle at which we start to scan (-90 degrees)
+        /// The tail angle at which we start to scan
+        /// previous segment angle -90 degrees
         /// </summary>
-        const double ScanStartAngle = -1 * Math.PI / 2;
+        const double ScanStartOffset = -1 * Math.PI / 2;
 
         /// <summary>
         /// We scan over a whole 180 degrees
+        /// centered around the previous segment angle
         /// </summary>
-        const double SweepAngle = Math.PI;
-
-        /// <summary>
-        /// The number of angle steps we scan over (901 means 0.2 degrees per step including the outer angles of -90 and +90)
-        /// </summary>
-        const int NAngles = 901;
+        const double SweepSize = Math.PI;
 
         #endregion
 
@@ -241,7 +219,7 @@ namespace MHApi.Tracking
             InitializeImageBuffers();//set up image buffers
             InitializeScanPoints();//create scan points appropriate for the tail parameters
             //Initialize our angle store for tracking (size never changes)
-            _angleStore = (int*)System.Runtime.InteropServices.Marshal.AllocHGlobal(NAngles*4);
+            _angleStore = (int*)System.Runtime.InteropServices.Marshal.AllocHGlobal(900 * 4);
         }
 
         #endregion
@@ -405,6 +383,18 @@ namespace MHApi.Tracking
             }
         }
 
+        /// <summary>
+        /// The length of each tail segment
+        /// in pixels
+        /// </summary>
+        public double SegmentLength
+        {
+            get
+            {
+                return Distance.Euclidian(TailEnd, TailStart) / NSegments;
+            }
+        }
+
         #endregion
 
         #region Methods
@@ -425,46 +415,36 @@ namespace MHApi.Tracking
         }
 
         /// <summary>
-        /// Based on the current tail-start and tail-end
-        /// as well as the number of segments computes the
-        /// scan points used during tracking
+        /// Based on the current segment length computes the
+        /// scanpoint offsets for each angle used during tracking
         /// </summary>
         protected virtual void InitializeScanPoints()
         {
-            double angleStep = SweepAngle / NAngles;
+            //Compute the angle step. Ideally we want to scan every pixel
+            //on a 360 degree circle around the current point with radius
+            //SegmentLength - so set angle step and NAngles to roughly
+            //give us this coverage
+            int circumference = (int)Math.Floor(2 * Math.PI * SegmentLength);
+            _angleStep = 2 * Math.PI / circumference;
+            
+            
             lock (_scanPointLock)
             {
-                _pointsToScan = new TailTestCoordinate[NAngles, _nSegments];
-                double segmentDistance = 0;
-                //Compute distance between consecutive segments
-                if (TailIsVertical())
+                //Create angle and offset arrays
+                _scanAngles = new double[circumference];
+                _coordinateOffsets = new IppiPoint[circumference];
+
+                
+                //establish scan angles and offsets:
+                //loop over sweep angles - THE FOLLOWING CODE CURRENTLY ASSUMES THE TAIL IS VERTICAL, FACING DOWN!!!
+                for (int j = 0; j < _scanAngles.Length; j++)
                 {
-                    segmentDistance = Math.Abs(_tailEnd.y - _tailStart.y) / (double)_nSegments;
-                }
-                else
-                    segmentDistance = Math.Abs(_tailEnd.x - _tailStart.x) / (double)_nSegments;
-                //establish scan points:
-                //loop over segments
-                for (int i = 0; i < _nSegments; i++)
-                {
-                    double radius = (i + 1) * segmentDistance;//the radius of the current segment
-                    int lastX = -1;//the last x-coordinate we added to the list
-                    int lastY = -1;//the last y-coordinate we added to the list
-                    int lastIndex = -1;//the last index were we added a point
-                    //loop over all angles - THE FOLLOWING CODE CURRENTLY ASSUMES THE TAIL IS VERTICAL, FACING DOWN!!!
-                    for (int j = 0; j < NAngles; j++)
-                    {
-                        double currAngle = ScanStartAngle + angleStep * j;
-                        int currX = (int)Math.Floor(radius * Math.Sin(currAngle) + TailStart.x);
-                        int currY = (int)Math.Floor(radius * Math.Cos(currAngle) + TailStart.y);
-                        if (currX != lastX || currY != lastY)//new point on circle identified
-                        {
-                            lastIndex++;
-                            _pointsToScan[lastIndex, i] = new TailTestCoordinate(currAngle, radius, new IppiPoint(currX, currY));
-                            lastX = currX;
-                            lastY = currY;
-                        }
-                    }
+                    //facing down is centered in the array
+                    _scanAngles[j] = j * _angleStep - Math.PI;
+
+                    int offX = (int)Math.Floor(SegmentLength * Math.Sin(_scanAngles[j]));
+                    int offY = (int)Math.Floor(SegmentLength * Math.Cos(_scanAngles[j]));
+                    _coordinateOffsets[j] = new IppiPoint(offX, offY);
                 }
             }//release lock
         }
@@ -552,13 +532,13 @@ namespace MHApi.Tracking
         /// </summary>
         /// <param name="image">The image on which to id the tail</param>
         /// <returns>NSegments number of TailPoints</returns>
-        public TailPoint[] TrackTail(Image8 image)
+        public TailSegment[] TrackTail(Image8 image)
         {
             lock (_regionLock)
             {
                 //CURRENTLY ONLY DOWNWARD FACING TAILS ARE PROPERLY SUPPORTED!!!
                 //Generate background by closing operation - once a second or whenever our coordinates changed
-                if (_frameNumber % _frameRate == 0 || !_bgValid)
+                if (_frameNumber % (_frameRate/10) == 0 || !_bgValid)
                 {
                     if (!_bgValid)
                     {
@@ -577,52 +557,75 @@ namespace MHApi.Tracking
                 //Fill small holes
                 BWImageProcessor.Close3x3(_thresholded, _thresholded, _calc1, _trackRegionInner);
             }
-            //Tracking concept: Whenever new tail coordinates or segment numbers are defined
-            //we compute for each segment in 0.2 degree steps all points on a -90 to +90 degree arc
-            //and store the coordinates with the respective angles and radii
-            //Depending on the actual distance we won't need all 900 points obviously so only
-            //unique coordinates get stored with the rest of the array "empty" (array will be 900xnSections in size)
-            //During tracking, for each segment we loop over the precomputed coordinates (until the first "empty" coordinate is reached)
-            //and store all pixels where the foreground is white. Since the angles are inherently sorted (coming from a directional sweep)
-            //we can then easily retrieve the median coordinate
-            var retval = new TailPoint[_nSegments];
+            //Tracking concept: We track the angle of each segment end (TailStart+SegmentLength:TailEnd)
+            //as the angular displacement from the previous segment end
+            //To do this we define one full-circle with radius SegmentLength and an angle step corresponding
+            //to ~1 Pixel. Then for each angle we pre-compute in InitializeScanPoints the corresponding x
+            //and y offsets. From the full circle set we track -90 to +90 degrees around the angle of the
+            //previous segment - for the initial segment that angle will be 0. For each segment we will return
+            //the segment angle and its associated end-point coordinate
+            var retval = new TailSegment[_nSegments];
             lock (_scanPointLock)
             {
+                //The index of the absolute angle of the previous segment in our angle sweep array
+                //determines which angles we sweep over for the next segment
+                int prevAngleIndex = _scanAngles.Length / 2;
+                int nAnglesPerHalfPi = prevAngleIndex / 2;//this is the number of entries in the array that we have to walk to cover 90 degrees
+                //we scan beginning with one segment length away from tail start and then walk
+                //down the tail rather than using circles fixed arount the tailstart
+                IppiPoint prevSegmentEnd = TailStart;
+                
                 //loop over tail segments
                 for (int i = 0; i < _nSegments; i++)
                 {
-                    //loop over all scan-points, exiting loop if empty
-                    //points are reached then find tail angle of this segment
+                    //loop over scan-points from -pi/2 to +pi/2 (i.e. nAnglesPerHalfPi) around previous segment angle
+                    //interpreting the scan points as offsets around the previous tail segment
+                    //end point
+                    //then find tail angle of this segment
                     int pointsFound = 0;//the number of non-zero pixels identified
-                    for (int j = 0; j < NAngles; j++)
+                    for (int j = -1 * nAnglesPerHalfPi; j < nAnglesPerHalfPi + 1; j++)
                     {
-                        if (_pointsToScan[j, i].Radius == 0)//have gone past the end of valid points
-                            break;
+                        //Determine the index to scan - usually this will simply be "prevAngleIndex+j" however we
+                        //have to loop around our angle array properly in case we screen more extreme angles
+                        int currIndex = prevAngleIndex + j;
+                        if (currIndex >= _scanAngles.Length)
+                            currIndex = currIndex % _scanAngles.Length;
+                        else if (currIndex < 0)
+                            currIndex = currIndex + _scanAngles.Length;
+
                         //If current point is outside of the image, ignore it
-                        IppiPoint pt = _pointsToScan[j, i].Coordinate;
+                        IppiPoint pt = new IppiPoint(_coordinateOffsets[currIndex].x + prevSegmentEnd.x, _coordinateOffsets[currIndex].y + prevSegmentEnd.y);
                         if (pt.x < 0 || pt.y < 0 || pt.x >= _imageSize.width || pt.y >= _imageSize.height)
                             continue;
                         //if the value at the current point >0 we mark that angle as valid
-                        //by storing the position in our anglestore
+                        //by storing the index in our anglestore
                         if (*_thresholded[pt] > 0)
                         {
-                            _angleStore[pointsFound] = j;
+                            _angleStore[pointsFound] = currIndex;
                             pointsFound++;
                         }
                     }
-                    //if we have more than two points, compute average after
-                    //removeing the minimum and maximum
-                    double tailAngle;
+                    //find the median point in our angle store if we have more than 2 points stored
+                    //the value in our angle store will directly give us the absolute screen angle of the segment
+                    //as well as the coordinate offset which we can used together with the previous segment endpoint
+                    //to compute the tail segment end coordinate - to get the delta angle we need to get the difference
+                    //between the stored index and the previously stored index, prevAngleIndex
+                    //after computing the appropriate return values we update prevAngleIndex with the index from the angle store
+                    //and prevSegmentEnd with the returned coordinate of the current tail segment
+                    double deltaTailAngle;
                     IppiPoint coordinate;
-                    if (pointsFound == 0)
+                    int pos;//the index in the angle store that we determine to be the tail-center
+
+                    if (pointsFound == 0)//we have lost the tail - no reason to keep tracking
                     {
-                        tailAngle = double.NaN;
+                        deltaTailAngle = double.NaN;
                         coordinate = new IppiPoint();
+                        retval[i] = new TailSegment(deltaTailAngle, coordinate);
+                        break;
                     }
                     else if (pointsFound < 3)
                     {
-                        tailAngle = _pointsToScan[_angleStore[0], i].Angle;
-                        coordinate = _pointsToScan[_angleStore[0], i].Coordinate;
+                        pos = _angleStore[0];
                     }
                     else
                     {
@@ -631,12 +634,14 @@ namespace MHApi.Tracking
                         //of an even number of points, the top of the lower half currently
                         //wins - since array indexing is zero based, we have to subtract 1
                         //from the computed median position
-                        var pos = _angleStore[(int)(Math.Ceiling(pointsFound / 2.0) - 1)];
-                        tailAngle = _pointsToScan[pos, i].Angle;
-                        coordinate = _pointsToScan[pos, i].Coordinate;
+                        pos = _angleStore[(int)(Math.Ceiling(pointsFound / 2.0) - 1)];
                     }
-                    retval[i] = new TailPoint(tailAngle, _pointsToScan[0, i].Radius, coordinate);
-                }
+                    coordinate = new IppiPoint(prevSegmentEnd.x + _coordinateOffsets[pos].x, prevSegmentEnd.y + _coordinateOffsets[pos].y);
+                    deltaTailAngle = (pos - prevAngleIndex) * _angleStep;
+                    prevAngleIndex = pos;
+                    prevSegmentEnd = coordinate;
+                    retval[i] = new TailSegment(deltaTailAngle, coordinate);
+                }//loop over tail segments
             }
             _frameNumber++;
             return retval;
