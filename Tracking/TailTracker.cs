@@ -537,7 +537,7 @@ namespace MHApi.Tracking
             lock (_regionLock)
             {
                 //CURRENTLY ONLY DOWNWARD FACING TAILS ARE PROPERLY SUPPORTED!!!
-                //Generate background by closing operation - once a second or whenever our coordinates changed
+                //Generate background by closing operation - 10 times a second or whenever our coordinates changed
                 if (_frameNumber % (_frameRate/10) == 0 || !_bgValid)
                 {
                     if (!_bgValid)
@@ -616,11 +616,14 @@ namespace MHApi.Tracking
                     IppiPoint coordinate;
                     int pos;//the index in the angle store that we determine to be the tail-center
 
-                    if (pointsFound == 0)//we have lost the tail - no reason to keep tracking
+                    if (pointsFound == 0)//we have lost the tail - no reason to keep tracking - fill remaining positions in array with NaNs for their angle
                     {
-                        deltaTailAngle = double.NaN;
-                        coordinate = new IppiPoint();
-                        retval[i] = new TailSegment(deltaTailAngle, coordinate);
+                        for (int k = i; k < _nSegments; k++)
+                        {
+                            deltaTailAngle = double.NaN;
+                            coordinate = new IppiPoint();
+                            retval[k] = new TailSegment(deltaTailAngle, coordinate);
+                        }
                         break;
                     }
                     else if (pointsFound < 3)
