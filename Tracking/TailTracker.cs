@@ -262,7 +262,7 @@ namespace MHApi.Tracking
                 {
                     if (_strel != null)
                         _strel.Dispose();
-                    _strel = BWImageProcessor.GenerateDiskMask(_morphSize);
+                    _strel = BWImageProcessor.GenerateDiskMask(value);
                     DefineTrackRegions();
                 }
                 _morphSize = value;
