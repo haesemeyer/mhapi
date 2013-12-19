@@ -58,6 +58,30 @@ namespace MHApi.Laser
             }
         }
 
+        /// <summary>
+        /// Gets/sets the intended laser output
+        /// power in mW
+        /// </summary>
+        public double LaserPower
+        {
+            get
+            {
+                var co = ControlOutput;
+                return -378.8 * co * co + 4737 * co - 5563;
+            }
+            set
+            {
+                if (value > 8000)
+                    throw new ArgumentOutOfRangeException("The requested power can't exceed 8000 mW");
+                double co;
+                if (value <= 0)
+                    co = 0;
+                else
+                    co = 2.184E-8 * value * value + 0.0002031 * value + 1.35;
+                ControlOutput = co;
+            }
+        }
+
 
         public SDLPS500Controller(string device, string aoName)
         {
