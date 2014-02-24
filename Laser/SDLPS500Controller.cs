@@ -33,6 +33,20 @@ namespace MHApi.Laser
         /// </summary>
         AnalogSingleChannelWriter _aoWriter;
 
+        /// <summary>
+        /// For efficiency we don't want to calculate the power
+        /// out of the control voltage every time (since this req.
+        /// square-rooting). So we cash power values everytime they
+        /// are set and invalidate the cash when the _controlOutput
+        /// is et directly
+        /// </summary>
+        double _powerCashed;
+
+        /// <summary>
+        /// Indicates validity of our power cash
+        /// </summary>
+        bool _powerCashValid;
+
 
         /// <summary>
         /// The control output to send to the laser.
@@ -54,6 +68,7 @@ namespace MHApi.Laser
                 {
                     _controlOutput = value;
                     _aoWriter.WriteSingleSample(true, _controlOutput);
+                    _powerCashValid = false;//invalidate our cashed power value
                 }
             }
         }
@@ -66,19 +81,33 @@ namespace MHApi.Laser
         {
             get
             {
-                var co = ControlOutput;
-                return -378.8 * co * co + 4737 * co - 5563;
+                if (_powerCashValid)
+                    return _powerCashed;
+                else
+                {
+                    var co = ControlOutput;
+                    if (co > 0.8778)//because of the control voltage restriction an output voltage <1V is way out of the usable domain anyways
+                        _powerCashed = -4.6498e3 + Math.Sqrt((co - 0.8778) / 2.184e-8);
+                    else
+                        _powerCashed = 0;
+                    if (_powerCashed < 0)
+                        _powerCashed = 0;
+                    _powerCashValid = true;
+                    return _powerCashed;
+                }
             }
             set
             {
-                if (value > 8000)
-                    throw new ArgumentOutOfRangeException("The requested power can't exceed 8000 mW");
+                if (value > 8000 || value < 0)
+                    throw new ArgumentOutOfRangeException("The requested power has to be btw. 0 and 8000 mW");
                 double co;
-                if (value <= 0)
+                if (value == 0)
                     co = 0;
                 else
                     co = 2.184E-8 * value * value + 0.0002031 * value + 1.35;
                 ControlOutput = co;
+                _powerCashed = value;//cash the requested power for quick access
+                _powerCashValid = true;
             }
         }
 
@@ -86,6 +115,8 @@ namespace MHApi.Laser
         public SDLPS500Controller(string device, string aoName)
         {
             _controlOutput = 0;
+            _powerCashValid = true;
+            _powerCashed = 0;
             //Set up task and channel writer
             _aoTask = new Task("LaserOutput");
             _aoTask.AOChannels.CreateVoltageChannel(device + "/" + aoName, "LasOut", 0, 5, AOVoltageUnits.Volts);
