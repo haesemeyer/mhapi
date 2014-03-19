@@ -140,7 +140,7 @@ namespace MHApi.Tracking
             //copy current image to previous image buffer
             ip.ippiCopy_8u_C1R(imCurrent[roi.TopLeft], imCurrent.Stride, _imPrevious[roi.TopLeft], _imPrevious.Stride, roi.Size);
             //return pixel count - divide sum by 255 since threshold sets al values to 255
-            return (int)(nPixels / 255);
+            return (int)nPixels / 255;
         }
 
         #endregion
