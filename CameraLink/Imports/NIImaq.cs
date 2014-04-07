@@ -2,7 +2,7 @@
 using System.Text;
 using System;
 
-namespace CameraLinkInterface.Imports
+namespace MHApi.CameraLinkInterface.Imports
 {
 
     #region Enumerations
@@ -813,7 +813,41 @@ namespace CameraLinkInterface.Imports
         /// <returns></returns>
         [DllImport("imaq.dll")]
         public static extern ImaqStatus imgMemUnlock(uint bid);
-        
+
+        /// <summary>
+        /// Writes a command string to the serial port of the camera link interface
+        /// </summary>
+        /// <param name="sid">The id of the cameralink session</param>
+        /// <param name="buffer">The string to send</param>
+        /// <param name="bufSize">The size of the string to send on call and after call contains the number of bytes written</param>
+        /// <param name="timeout">The timeout for the write in ms</param>
+        /// <returns></returns>
+        [DllImport("imaq.dll")]
+        public static extern ImaqStatus imgSessionSerialWrite(uint sid, string buffer, ref uint bufSize, uint timeout);
+
+        /// <summary>
+        /// Reads a string from the serial port of the camera link interface
+        /// </summary>
+        /// <param name="sid">The id of the cameralink session</param>
+        /// <param name="buffer">The buffer in which to receive the string - pre-initalize to bufSize capacity</param>
+        /// <param name="bufSize">The maximum buffer size on call and after call the number of characters read</param>
+        /// <param name="timeout">The timeout for the write</param>
+        /// <returns></returns>
+        [DllImport("imaq.dll")]
+        public static extern ImaqStatus imgSessionSerialRead(uint sid, StringBuilder buffer, ref uint bufSize, uint timeout);
+
+        /// <summary>
+        /// Flushes the internal serial buffer - call btw. write and read
+        /// </summary>
+        /// <param name="sid">The id of the current cameralink session</param>
+        /// <returns></returns>
+        [DllImport("imaq.dll")]
+        public static extern ImaqStatus imgSessionSerialFlush(uint sid);
+
+        //public static extern ImaqStatus imgSessionSerialWrite(uint sid, Int8 *buffer, uint *bufSize, uint timeout);
+        //public static extern ImaqStatus imgSessionSerialRead(uint sid, Int8 *buffer, uint *bufSize, uint timeout);
+        //public static extern ImaqStatus imgSessionSerialFlush(uint sid);
+
 //public static extern ImaqStatus imgSnap(uint sid, void **bufAddr);
 //public static extern ImaqStatus imgSnapArea(uint sid, void **bufAddr,uint top,uint left, uint height, uint width,uint rowBytes);
 //public static extern ImaqStatus imgGrabArea(uint sid, void** bufPtr, uint syncOnVB, uint top, uint left, uint height, uint width, uint rowBytes);
@@ -835,10 +869,9 @@ namespace CameraLinkInterface.Imports
 //public static extern ImaqStatus imgSetCameraAttributeNumeric(uint sid, const Int8* attributeString,double newValueNumeric);
 //public static extern ImaqStatus imgGetCameraAttributeString(uint sid, const Int8* attributeString,Int8* currentValueString,uint sizeofCurrentValueString);
 //public static extern ImaqStatus imgSetCameraAttributeString(uint sid, const Int8* attributeString,Int8* newValueString);
-//public static extern ImaqStatus imgSessionSerialWrite(uint sid, Int8 *buffer, uint *bufSize, uint timeout);
-//public static extern ImaqStatus imgSessionSerialRead(uint sid, Int8 *buffer, uint *bufSize, uint timeout);
+
 //public static extern ImaqStatus imgSessionSerialReadBytes(uint sid, char* buffer, uint *bufferSize, uint timeout);
-//public static extern ImaqStatus imgSessionSerialFlush(uint sid);
+
 //public static extern ImaqStatus imgPulseCreate2(uint timeBase, uint delay, uint width, IMG_SIGNAL_TYPE signalType, uint signalIdentifier, uint signalPolarity, IMG_SIGNAL_TYPE outputType, uint outputNumber, uint outputPolarity, uint pulseMode, PULSE_ID* plsID);
 //public static extern ImaqStatus imgPulseDispose(PULSE_ID plsID);
 //public static extern ImaqStatus imgPulseRate(double delaytime, double widthtime, ref uint delay, ref uint width, ref uint timebase);

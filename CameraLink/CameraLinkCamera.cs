@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-using CameraLinkInterface.Imports;
+using MHApi.CameraLinkInterface.Imports;
 
 using MHApi.DrewsClasses;
 using MHApi.Imaging;
@@ -11,7 +11,7 @@ using MHApi.Imaging;
 using ipp;
 
 
-namespace CameraLinkInterface
+namespace MHApi.CameraLinkInterface
 {
 	/// <summary>
 	/// Represents a camera running off a camera
@@ -353,6 +353,39 @@ namespace CameraLinkInterface
 			}
 			_acquiredFrames++;
 			return frameActual;
+		}
+
+		/// <summary>
+		/// Writes a serial command to the camera and returns the number of characters written
+		/// </summary>
+		/// <param name="command">The serial command to write including the appropriate termination char</param>
+		/// <returns>The number of characters written to the interface</returns>
+		public uint SerialWrite(string command)
+		{
+			uint written = (uint)command.Length;
+			CheckError(NIImaq.imgSessionSerialWrite(_sid, command, ref written, 1000));
+			return written;
+		}
+
+		/// <summary>
+		/// Reads up to the specified number of characters from the serial buffer
+		/// </summary>
+		/// <param name="charsToRead">The (maximum) number of characters to read on call and the number
+		/// of characters actually read after the function call</param>
+		/// <returns>The read string from the serial port</returns>
+		public string SerialRead(ref uint charsToRead)
+		{
+			StringBuilder sb = new StringBuilder((int)charsToRead);
+			CheckError(NIImaq.imgSessionSerialRead(_sid, sb, ref charsToRead, 1000));
+			return sb.ToString();
+		}
+
+		/// <summary>
+		/// Flushes the serial buffer. Call btw. consecutive writes and reads
+		/// </summary>
+		public void SerialFlush()
+		{
+			CheckError(NIImaq.imgSessionSerialFlush(_sid));
 		}
 
 		#endregion
