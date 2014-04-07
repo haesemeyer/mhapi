@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-using MHApi.CameraLinkInterface.Imports;
+using MHApi.CameraLink.Imports;
 
 using MHApi.DrewsClasses;
 using MHApi.Imaging;
@@ -11,7 +11,7 @@ using MHApi.Imaging;
 using ipp;
 
 
-namespace MHApi.CameraLinkInterface
+namespace MHApi.CameraLink
 {
 	/// <summary>
 	/// Represents a camera running off a camera
@@ -394,7 +394,7 @@ namespace MHApi.CameraLinkInterface
 
 		public bool IsDisposed { get; private set; }
 
-		public void Dispose()
+		protected virtual void Dispose(bool disposing)
 		{
 			if (IsDisposed)
 				return;
@@ -408,7 +408,12 @@ namespace MHApi.CameraLinkInterface
 				_imgDownsize.Dispose();
 				_imgDownsize = null;
 			}
-			IsDisposed = true;
+		}
+
+		public void Dispose()
+		{
+			Dispose(true);
+            IsDisposed = true;
 		}
 
 		~CameraLinkCamera()
@@ -416,6 +421,7 @@ namespace MHApi.CameraLinkInterface
 			if (!IsDisposed)
 			{
 				System.Diagnostics.Debug.WriteLine("Forgot to dispose camera!");
+                Dispose(false);
 			}
 		}
 

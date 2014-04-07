@@ -2,7 +2,7 @@
 using System.Text;
 using System;
 
-namespace MHApi.CameraLinkInterface.Imports
+namespace MHApi.CameraLink.Imports
 {
 
     #region Enumerations
