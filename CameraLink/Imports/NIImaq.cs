@@ -519,6 +519,58 @@ namespace MHApi.CameraLinkInterface.Imports
         IMG_CMD_INVALID = 0x10  // Reserved for internal use
     }
 
+    public enum IMG_SIGNAL_TYPE : uint
+    {
+        IMG_SIGNAL_NONE = 0xFFFFFFFF,       //Used to disable the route.
+        IMG_SIGNAL_EXTERNAL = 0,            //Specifies the signal type as the external trigger lines.
+        IMG_SIGNAL_RTSI = 1,                //Specifies the signal type as the RTSI trigger lines.
+        IMG_SIGNAL_ISO_IN = 2,              //Specifies the signal type as the isolated input trigger lines.
+        IMG_SIGNAL_ISO_OUT = 3,             //Specifies the signal type as the isolated output trigger lines.
+        IMG_SIGNAL_STATUS = 4,              //Specifies the signal type as one of the status signals, IMG_AQ_DONE, IMG_AQ_IN_PROGRESS, IMG_BUF_COMPLETE, IMG_FRAME_DONE, IMG_FRAME_START, IMG_IMMEDIATE.
+        IMG_SIGNAL_SCALED_ENCODER = 5,      //Specifies the signal type as the scaled encoder signal
+        IMG_SIGNAL_SOFTWARE_TRIGGER = 6     //
+    }
+
+    public enum PulseTimebase : uint
+    {
+        PULSE_TIMEBASE_PIXELCLK = 0x00000001, //Specifies the incoming pixel clock from the camera to use as a timebase for pulse generation.
+        PULSE_TIMEBASE_50MHZ = 0x00000002,    //Specifies a 100 kHz timebase to use for pulse generation.
+        PULSE_TIMEBASE_100KHZ = 0x00000003,   //Specifies a 50 MHz timebase to use for pulse generation.
+        PULSE_TIMEBASE_SCALED_ENCODER = 0x00000004 //Specifies scaled encoder counts as units for pulse generation.
+    }
+
+    public enum InternalSignalIdentifier : uint
+    {
+        IMG_AQ_DONE = 8,     // wait for the entire acquisition to complete
+        IMG_FRAME_START = 9,     // wait for the frame to start
+        IMG_FRAME_DONE = 10,    // wait for the frame to complete
+        IMG_BUF_COMPLETE = 11,    // wait for the buffer to complete 
+        IMG_AQ_IN_PROGRESS = 15, //Asserted when the device initiates an acquisition either through a software- or hardware-triggered start.
+        IMG_IMMEDIATE = 16,//Causes the function to generate a pulse when the function is executed.
+        IMG_FIXED_FREQUENCY = 17,  // used in imgSessionLineTrigSrouce (linescan)
+        IMG_LINE_VALID = 18, // wait for line valid signal (HSYNC)
+        IMG_FRAME_VALID = 19    // wait for frame valid signal (VSYNC)
+    }
+
+    public enum TriggerPolarity : uint
+    {
+        IMG_TRIG_POLAR_ACTIVEH = 0,
+        IMG_TRIG_POLAR_ACTIVEL = 1
+    }
+
+    public enum PulsePolarity : uint
+    {
+        IMG_PULSE_POLAR_ACTIVEH = 0,
+        IMG_PULSE_POLAR_ACTIVEL = 1
+    }
+
+    public enum PulseMode : uint
+    {
+        PULSE_MODE_TRAIN = 0x00000001,          //Pulse is generated continuously after the trigger is asserted. Choose this option to generate a continuous pulse train that is inactive for the number of cycles specified in the delay parameter, and active for the number of cycles specified in the width parameter. When the pulse train is started, it continues periodically until you call imgPulseStop, imgPulseDispose, or imgClose.
+        PULSE_MODE_SINGLE = 0x00000002,         //Pulse occurs one time when the first trigger occurs. Choose this option to generate a single pulse. On the first occurrence of signal_source, the output line stays inactive for the number of cycles specified in the delay parameter, and becomes active for the number of cycles specified in the width parameter. Future occurrences of signal_source do not affect the output line.
+        PULSE_MODE_SINGLE_REARM = 0x00000003    //Pulse occurs one time on each trigger occurrence. Choose this option to generate a rearmed single shot pulse. On every occurrence of signal_source, the output line stays inactive for the number of cycles specified in the delay parameter, and becomes active for the number of cycles specified in the width parameter. When the pulse is started, output toggles for each occurrence of signal_source until you call imgPulseStop, imgPulseDispose, or imgClose. 
+    }
+
     #endregion
 
     /// <summary>
@@ -848,6 +900,74 @@ namespace MHApi.CameraLinkInterface.Imports
         //public static extern ImaqStatus imgSessionSerialRead(uint sid, Int8 *buffer, uint *bufSize, uint timeout);
         //public static extern ImaqStatus imgSessionSerialFlush(uint sid);
 
+        /// <summary>
+        /// Creates a new pulse type that can be generated on the camera link lines
+        /// </summary>
+        /// <param name="timeBase">The clock timebase of the pulse</param>
+        /// <param name="delay">The "delay" or inactive part of the pulse [delay × (timebase resolution)]</param>
+        /// <param name="width">The width of the active part of the pulse</param>
+        /// <param name="signalType">The signal type that will initiate / trigger pulse generation</param>
+        /// <param name="signalIdentifier"> The identifier of the signal that will initiate the pulse generation. If the signal type is one of the triggers, then this value specifies which trigger line.
+        /// If the signal type is IMG_SIGNAL_STATUS, signalIdentifier can be one of the enum constants</param>
+        /// <param name="signalPolarity">When triggered externally determines if triggered on rising or falling edge</param>
+        /// <param name="outputType">Type of trigger line on which the pulse is generated. outputType can be one of the following constants</param>
+        /// <param name="outputNumber">Number of the trigger line on which the pulse is generated</param>
+        /// <param name="outputPolarity">Polarity of the pulse output </param>
+        /// <param name="pulseMode">Indicates if the pulse is generated once or continuously.</param>
+        /// <param name="plsID">Receives the pulse ID.</param>
+        /// <returns></returns>
+        [DllImport("imaq.dll")]
+        public static extern ImaqStatus imgPulseCreate2(PulseTimebase timeBase, uint delay, uint width, IMG_SIGNAL_TYPE signalType, uint signalIdentifier, TriggerPolarity signalPolarity, IMG_SIGNAL_TYPE outputType, uint outputNumber, PulsePolarity outputPolarity, PulseMode pulseMode, ref uint plsID);
+
+        /// <summary>
+        /// Creates a new pulse type that can be generated on the camera link lines
+        /// </summary>
+        /// <param name="timeBase">The clock timebase of the pulse</param>
+        /// <param name="delay">The "delay" or inactive part of the pulse [delay × (timebase resolution)]</param>
+        /// <param name="width">The width of the active part of the pulse</param>
+        /// <param name="signalType">The signal type that will initiate / trigger pulse generation</param>
+        /// <param name="signalIdentifier"> The identifier of the signal that will initiate the pulse generation. If the signal type is one of the triggers, then this value specifies which trigger line.
+        /// If the signal type is IMG_SIGNAL_STATUS, signalIdentifier can be one of the enum constants</param>
+        /// <param name="signalPolarity">When triggered externally determines if triggered on rising or falling edge</param>
+        /// <param name="outputType">Type of trigger line on which the pulse is generated. outputType can be one of the following constants</param>
+        /// <param name="outputNumber">Number of the trigger line on which the pulse is generated</param>
+        /// <param name="outputPolarity">Polarity of the pulse output </param>
+        /// <param name="pulseMode">Indicates if the pulse is generated once or continuously.</param>
+        /// <param name="plsID">Receives the pulse ID.</param>
+        /// <returns></returns>
+        [DllImport("imaq.dll")]
+        public static extern ImaqStatus imgPulseCreate2(PulseTimebase timeBase, uint delay, uint width, IMG_SIGNAL_TYPE signalType, InternalSignalIdentifier signalIdentifier, TriggerPolarity signalPolarity, IMG_SIGNAL_TYPE outputType, uint outputNumber, PulsePolarity outputPolarity, PulseMode pulseMode, ref uint plsID);
+
+        /// <summary>
+        /// Stops generation and disposes resources of a given pulse id
+        /// </summary>
+        /// <param name="plsID">The pulse identifier</param>
+        /// <returns></returns>
+        [DllImport("imaq.dll")]
+        public static extern ImaqStatus imgPulseDispose(uint plsID);
+
+        /// <summary>
+        /// Arms a pulse to be triggered (or started immediately)
+        /// </summary>
+        /// <param name="plsID">The id of the pulse</param>
+        /// <param name="sid">The session associated with the pulse</param>
+        /// <returns></returns>
+        [DllImport("imaq.dll")]
+        public static extern ImaqStatus imgPulseStart(uint plsID, uint sid);
+
+        /// <summary>
+        /// Stops the given pulse
+        /// </summary>
+        /// <param name="plsID">The id of the pulse</param>
+        /// <returns></returns>
+        [DllImport("imaq.dll")]
+        public static extern ImaqStatus imgPulseStop(uint plsID);
+
+        //public static extern ImaqStatus imgPulseCreate2(uint timeBase, uint delay, uint width, IMG_SIGNAL_TYPE signalType, uint signalIdentifier, uint signalPolarity, IMG_SIGNAL_TYPE outputType, uint outputNumber, uint outputPolarity, uint pulseMode, PULSE_ID* plsID);
+        //public static extern ImaqStatus imgPulseDispose(PULSE_ID plsID);
+        //public static extern ImaqStatus imgPulseStart(PULSE_ID pid,uint sid);
+        //public static extern ImaqStatus imgPulseStop(PULSE_ID pid);
+
 //public static extern ImaqStatus imgSnap(uint sid, void **bufAddr);
 //public static extern ImaqStatus imgSnapArea(uint sid, void **bufAddr,uint top,uint left, uint height, uint width,uint rowBytes);
 //public static extern ImaqStatus imgGrabArea(uint sid, void** bufPtr, uint syncOnVB, uint top, uint left, uint height, uint width, uint rowBytes);
@@ -872,12 +992,7 @@ namespace MHApi.CameraLinkInterface.Imports
 
 //public static extern ImaqStatus imgSessionSerialReadBytes(uint sid, char* buffer, uint *bufferSize, uint timeout);
 
-//public static extern ImaqStatus imgPulseCreate2(uint timeBase, uint delay, uint width, IMG_SIGNAL_TYPE signalType, uint signalIdentifier, uint signalPolarity, IMG_SIGNAL_TYPE outputType, uint outputNumber, uint outputPolarity, uint pulseMode, PULSE_ID* plsID);
-//public static extern ImaqStatus imgPulseDispose(PULSE_ID plsID);
-//public static extern ImaqStatus imgPulseRate(double delaytime, double widthtime, ref uint delay, ref uint width, ref uint timebase);
-//public static extern ImaqStatus imgPulseStart(PULSE_ID pid,uint sid);
-//public static extern ImaqStatus imgPulseUpdate(PULSE_ID pid, uint sid, uint delay, uint width);
-//public static extern ImaqStatus imgPulseStop(PULSE_ID pid);
+
 //public static extern ImaqStatus imgSessionWaitSignal2(uint sid, IMG_SIGNAL_TYPE signalType, uint signalIdentifier, uint signalPolarity, uint timeout);
 //public static extern ImaqStatus imgSessionWaitSignalAsync2(uint sid, IMG_SIGNAL_TYPE signalType, uint signalIdentifier, uint signalPolarity, CALL_BACK_PTR2 funcptr, void* callbackData);
 //public static extern ImaqStatus imgSessionTriggerDrive2(uint sid, IMG_SIGNAL_TYPE trigType, uint trigNum, uint polarity, uint signal);
