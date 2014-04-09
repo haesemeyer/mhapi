@@ -100,15 +100,15 @@ namespace MHApi.CameraLink
 		public CameraLinkCamera(string interfaceId)
 		{
 			//Attach to interface
-			CheckError(NIImaq.imgInterfaceOpen(interfaceId, out _ifid));
+			NIImaq.CheckError(NIImaq.imgInterfaceOpen(interfaceId, out _ifid));
 			//Open session
-			CheckError(NIImaq.imgSessionOpen(_ifid, out _sid));
+            NIImaq.CheckError(NIImaq.imgSessionOpen(_ifid, out _sid));
 			//Get image dimensions
-			CheckError(NIImaq.imgGetAttribute(_sid, ImaqAttribute.IMG_ATTR_ROI_WIDTH, out _width));
-			CheckError(NIImaq.imgGetAttribute(_sid, ImaqAttribute.IMG_ATTR_ROI_HEIGHT, out _height));
-			CheckError(NIImaq.imgGetAttribute(_sid, ImaqAttribute.IMG_ATTR_BYTESPERPIXEL, out _bytesPerPixel));
+            NIImaq.CheckError(NIImaq.imgGetAttribute(_sid, ImaqAttribute.IMG_ATTR_ROI_WIDTH, out _width));
+            NIImaq.CheckError(NIImaq.imgGetAttribute(_sid, ImaqAttribute.IMG_ATTR_ROI_HEIGHT, out _height));
+            NIImaq.CheckError(NIImaq.imgGetAttribute(_sid, ImaqAttribute.IMG_ATTR_BYTESPERPIXEL, out _bytesPerPixel));
 			System.Diagnostics.Debug.WriteLine("Bytes per pixel {0}", _bytesPerPixel);
-			CheckError(NIImaq.imgGetAttribute(_sid, ImaqAttribute.IMG_ATTR_BITSPERPIXEL, out _bitsPerPixel));
+            NIImaq.CheckError(NIImaq.imgGetAttribute(_sid, ImaqAttribute.IMG_ATTR_BITSPERPIXEL, out _bitsPerPixel));
 			if (_bytesPerPixel == 2 && _bitsPerPixel < 16)
 			{
 				_scaleFactor = 1;
@@ -203,14 +203,7 @@ namespace MHApi.CameraLink
 
 		#region Methods
 
-		static void CheckError(ImaqStatus retval)
-		{
-			if (retval != 0)
-			{
-				System.Diagnostics.Debug.WriteLine("IMAQ error. " + retval.ToString());
-				throw new ApplicationException("IMAQ error. " + retval.ToString());
-			}
-		}
+		
 
 		/// <summary>
 		/// Configures the camera setting up required buffers.
@@ -223,7 +216,7 @@ namespace MHApi.CameraLink
 			//set up ring buffer pointers
 			_ringBuffer = new IntPtr[bufferCount];
 			//create buffer list
-			CheckError(NIImaq.imgCreateBufList(bufferCount, out _bufId));
+            NIImaq.CheckError(NIImaq.imgCreateBufList(bufferCount, out _bufId));
 			//compute required buffer size            
 			uint bufSize = _width * _height * BytesPerPixel;
 			//if this is a 16bit acquisition we pre-allocate an internal buffer
@@ -235,19 +228,19 @@ namespace MHApi.CameraLink
 			for (uint i = 0; i < bufferCount; i++)
 			{
 				//Let imaq obtain the buffer memory
-				CheckError(NIImaq.imgCreateBuffer(_sid, Buffer_Location.IMG_HOST_FRAME, bufSize, out _ringBuffer[i]));
+                NIImaq.CheckError(NIImaq.imgCreateBuffer(_sid, Buffer_Location.IMG_HOST_FRAME, bufSize, out _ringBuffer[i]));
 				//assign buffer to our buffer list
-				CheckError(NIImaq.imgSetBufferElement2(_bufId, i, BlItemType.IMG_BUFF_ADDRESS, _ringBuffer[i]));
+                NIImaq.CheckError(NIImaq.imgSetBufferElement2(_bufId, i, BlItemType.IMG_BUFF_ADDRESS, _ringBuffer[i]));
 				//tell the list about our buffer size
-				CheckError(NIImaq.imgSetBufferElement2(_bufId, i, BlItemType.IMG_BUFF_SIZE, bufSize));
+                NIImaq.CheckError(NIImaq.imgSetBufferElement2(_bufId, i, BlItemType.IMG_BUFF_SIZE, bufSize));
 				//Set the appropriate buffer command
 				var bufCmd = i < (bufferCount - 1) ? BuffCommands.IMG_CMD_NEXT : BuffCommands.IMG_CMD_LOOP;
-				CheckError(NIImaq.imgSetBufferElement2(_bufId, i, BlItemType.IMG_BUFF_COMMAND, bufCmd));
+                NIImaq.CheckError(NIImaq.imgSetBufferElement2(_bufId, i, BlItemType.IMG_BUFF_COMMAND, bufCmd));
 			}
 			//lock buffer list (supposed to be obsolote but example still does it...)
-			CheckError(NIImaq.imgMemLock(_bufId));
+            NIImaq.CheckError(NIImaq.imgMemLock(_bufId));
 			//configure the session to use this buffer list
-			CheckError(NIImaq.imgSessionConfigure(_sid, _bufId));
+            NIImaq.CheckError(NIImaq.imgSessionConfigure(_sid, _bufId));
 			_configured = true;
 		}
 
@@ -267,7 +260,7 @@ namespace MHApi.CameraLink
 				Configure((uint)bufferCount);
 			//Start asynchronous acquisition - after this call the ring-buffer
 			//will get filled with images!
-			CheckError(NIImaq.imgSessionAcquire(_sid, true, null));
+            NIImaq.CheckError(NIImaq.imgSessionAcquire(_sid, true, null));
 			_captureRunning = true;
 			_acquiredFrames = 0;
 		}
@@ -325,7 +318,7 @@ namespace MHApi.CameraLink
 			}
 			else
 			{
-				CheckError(NIImaq.imgSessionCopyBufferByNumber(_sid, requestedFrame, (IntPtr)imageOut.Image, IMG_OVERWRITE_MODE.IMG_OVERWRITE_GET_NEWEST, out frameActual, out indexActual));
+                NIImaq.CheckError(NIImaq.imgSessionCopyBufferByNumber(_sid, requestedFrame, (IntPtr)imageOut.Image, IMG_OVERWRITE_MODE.IMG_OVERWRITE_GET_NEWEST, out frameActual, out indexActual));
 				if (frameActual != requestedFrame)
 				{
 					System.Diagnostics.Debug.WriteLine("Requested frame {0}; obtained frame {1}", requestedFrame, frameActual);
@@ -346,7 +339,7 @@ namespace MHApi.CameraLink
 			uint frameActual, indexActual;
 			if (_bytesPerPixel == 1)
 				System.Diagnostics.Debug.WriteLine("Acquired 8 bit image into 16bit structure");
-			CheckError(NIImaq.imgSessionCopyBufferByNumber(_sid, requestedFrame, (IntPtr)imageOut.Image, IMG_OVERWRITE_MODE.IMG_OVERWRITE_GET_NEWEST, out frameActual, out indexActual));
+            NIImaq.CheckError(NIImaq.imgSessionCopyBufferByNumber(_sid, requestedFrame, (IntPtr)imageOut.Image, IMG_OVERWRITE_MODE.IMG_OVERWRITE_GET_NEWEST, out frameActual, out indexActual));
 			if (frameActual != requestedFrame)
 			{
 				System.Diagnostics.Debug.WriteLine("Requested frame {0}; obtained frame {1}", requestedFrame, frameActual);
@@ -363,7 +356,7 @@ namespace MHApi.CameraLink
 		public uint SerialWrite(string command)
 		{
 			uint written = (uint)command.Length;
-			CheckError(NIImaq.imgSessionSerialWrite(_sid, command, ref written, 1000));
+            NIImaq.CheckError(NIImaq.imgSessionSerialWrite(_sid, command, ref written, 1000));
 			return written;
 		}
 
@@ -376,7 +369,7 @@ namespace MHApi.CameraLink
 		public string SerialRead(ref uint charsToRead)
 		{
 			StringBuilder sb = new StringBuilder((int)charsToRead);
-			CheckError(NIImaq.imgSessionSerialRead(_sid, sb, ref charsToRead, 1000));
+            NIImaq.CheckError(NIImaq.imgSessionSerialRead(_sid, sb, ref charsToRead, 1000));
 			return sb.ToString();
 		}
 
@@ -385,7 +378,7 @@ namespace MHApi.CameraLink
 		/// </summary>
 		public void SerialFlush()
 		{
-			CheckError(NIImaq.imgSessionSerialFlush(_sid));
+            NIImaq.CheckError(NIImaq.imgSessionSerialFlush(_sid));
 		}
 
 		#endregion

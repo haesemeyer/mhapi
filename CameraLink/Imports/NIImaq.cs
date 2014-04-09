@@ -578,8 +578,19 @@ namespace MHApi.CameraLink.Imports
     /// </summary>
     unsafe class NIImaq
     {
-
-        
+        /// <summary>
+        /// Raises an exception when an imaq function returns
+        /// an error condition
+        /// </summary>
+        /// <param name="retval">The function return value to check</param>
+        public static void CheckError(ImaqStatus retval)
+        {
+            if (retval != 0)
+            {
+                System.Diagnostics.Debug.WriteLine("IMAQ error. " + retval.ToString());
+                throw new ApplicationException("IMAQ error. " + retval.ToString());
+            }
+        }
 
         /// <summary>
         /// Opens a camera link interface
