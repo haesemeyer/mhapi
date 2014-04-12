@@ -218,7 +218,7 @@ namespace MHApi.CameraLink
             SerialFlush();
             uint toRead = 255;
             string reply = SerialRead(ref toRead);
-            if (reply.Contains("ACK"))
+            if (reply.Contains("ACK:"))
                 return true;
             else
             {
