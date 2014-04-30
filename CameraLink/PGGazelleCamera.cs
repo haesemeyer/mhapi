@@ -187,7 +187,7 @@ namespace MHApi.CameraLink
         /// Constructs a new point grey gazelle camera link object
         /// </summary>
         /// <param name="interfaceId">The interface name. Optionally followed by ::# identifying the port - 0 based</param>
-        PGGazelleCamera(string interfaceId) : base(interfaceId)
+        public PGGazelleCamera(string interfaceId) : base(interfaceId)
         {
             _triggerActivation = TriggerActivations.risingEdge;
             SetTriggerActivation();
