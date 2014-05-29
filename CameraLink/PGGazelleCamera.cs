@@ -212,7 +212,7 @@ namespace MHApi.CameraLink
             if (!command.Contains(' '))
                 throw new ArgumentException("command", "Serial set commands need to have at least two parts.");
             //append termination character if necessary
-            if (command[command.Length] != '\r')
+            if (command[command.Length-1] != '\r')
                 command += '\r';
             SerialWrite(command);
             SerialFlush();
