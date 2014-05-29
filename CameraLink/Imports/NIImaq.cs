@@ -573,6 +573,8 @@ namespace MHApi.CameraLink.Imports
 
     #endregion
 
+    
+
     /// <summary>
     /// DLL imports from niimaq.dll
     /// </summary>
@@ -588,7 +590,7 @@ namespace MHApi.CameraLink.Imports
             if (retval != 0)
             {
                 System.Diagnostics.Debug.WriteLine("IMAQ error. " + retval.ToString());
-                throw new ApplicationException("IMAQ error. " + retval.ToString());
+                throw new NIImaqException("IMAQ error. " + retval.ToString());
             }
         }
 
