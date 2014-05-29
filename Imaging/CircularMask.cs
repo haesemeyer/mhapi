@@ -180,6 +180,8 @@ namespace MHApi.Imaging
             Marshal.FreeHGlobal((IntPtr)dTransBuffer);
             distImage.Dispose();
 
+            _maskValid = true;
+
             /*
             //We want to generate the mask with the least amount of pixel-iterations possible
             //based on the radius we can define to rectangular regions for which we can
