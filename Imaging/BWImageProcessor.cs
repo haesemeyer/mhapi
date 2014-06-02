@@ -139,8 +139,8 @@ namespace MHApi.Imaging
         {
             //Modify region we operate on to allow mask overhang
             var inner = new IppiROI(roi.X + 1, roi.Y + 1, roi.Width - 3, roi.Height - 3);      
-            IppHelper.IppCheckCall(ip.ippiErode3x3_8u_C1R(imCalc[inner.TopLeft], imCalc.Stride, imOpened[inner.TopLeft], imOpened.Stride, inner.Size));
-            IppHelper.IppCheckCall(ip.ippiDilate3x3_8u_C1R(imIn[inner.TopLeft], imIn.Stride, imCalc[inner.TopLeft], imCalc.Stride, inner.Size));
+            IppHelper.IppCheckCall(ip.ippiErode3x3_8u_C1R(imIn[inner.TopLeft], imIn.Stride, imCalc[inner.TopLeft], imCalc.Stride, inner.Size));
+            IppHelper.IppCheckCall(ip.ippiDilate3x3_8u_C1R(imCalc[inner.TopLeft], imCalc.Stride, imOpened[inner.TopLeft], imOpened.Stride, inner.Size));
         }
 
         /// <summary>
