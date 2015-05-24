@@ -641,6 +641,14 @@ namespace MHApi.Tracking
                     }
                     coordinate = new IppiPoint(prevSegmentEnd.x + _coordinateOffsets[pos].x, prevSegmentEnd.y + _coordinateOffsets[pos].y);
                     deltaTailAngle = (pos - prevAngleIndex) * _angleStep;
+                    //the condition above of wrapping around the "angle circle":if (currIndex >= _scanAngles.Length)....
+                    //results in one very large (close to +360 or -360) angle of opposite sign at the switch point
+                    //however, since we usually only scan over offsets from +90 to -90 this case is easy to spot
+                    //and remedy:
+                    if (deltaTailAngle > 90)
+                        deltaTailAngle = deltaTailAngle - 360;//this should create the appropriate tail angle btw. 0 and -90
+                    else if (deltaTailAngle < -90)
+                        deltaTailAngle = 360 + deltaTailAngle;//this should create the appropriate tail angle btw. 0 and +90
                     prevAngleIndex = pos;
                     prevSegmentEnd = coordinate;
                     retval[i] = new TailSegment(deltaTailAngle, coordinate);
