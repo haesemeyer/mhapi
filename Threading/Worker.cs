@@ -88,8 +88,8 @@ namespace MHApi.Threading
         /// </summary>
         public void Start()
         {
-            if (isDisposed)
-                throw new ApplicationException("Attempted to start disposed worker thread");
+            if (IsDisposed)
+                throw new ObjectDisposedException("Worker","Attempted to start disposed worker thread");
             if (IsRunning)
                 throw new ApplicationException("Attempted to start already running thread");
             thread.Start();
@@ -101,6 +101,8 @@ namespace MHApi.Threading
         /// </summary>
         public void Stop()
         {
+            if (IsDisposed)
+                throw new ObjectDisposedException("Worker","Attempted to start disposed worker thread");
             if (IsRunning)
             {
                 stop.Set();
@@ -140,26 +142,38 @@ namespace MHApi.Threading
 
         #region IDisposable Members
 
-        private bool isDisposed;
+        public bool IsDisposed { get; private set; }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (IsDisposed)
+                return;
+            GC.SuppressFinalize(this);
+            if (disposing)
+            {
+                if (IsRunning)
+                {
+                    stop.Set();
+                    if (!thread.Join(JoinTimeout))
+                    {
+                        throw new ApplicationException("ThreadJoinFailed");
+                    }
+                }
+            }
+            else
+                if (IsRunning)
+                    stop.Set();
+            IsDisposed = true;
+        }
         
         public void Dispose()
         {
-            if (isDisposed)
-                return;
-            if (IsRunning)
-            {
-                stop.Set();
-                if (!thread.Join(JoinTimeout))
-                {
-                    throw new ApplicationException("ThreadJoinFailed");
-                }
-            }
-            isDisposed = true;
+            Dispose(true);
         }
 
         ~Worker()
         {
-            Dispose();
+            Dispose(false);
         }
 
         #endregion
