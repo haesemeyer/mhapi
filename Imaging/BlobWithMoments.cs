@@ -13,7 +13,7 @@ namespace MHApi.Imaging
     /// Describes a blob in an image (analogous to the structures returned by regionprops in MATLAB)
     /// together with the blob's moments
     /// </summary>
-    public unsafe sealed class BlobWithMoments : IComparable
+    public unsafe sealed class BlobWithMoments : IComparable<BlobWithMoments>
     {
 
         #region Fields
@@ -512,21 +512,18 @@ namespace MHApi.Imaging
             return blobs;
         }
 
-        #region IComparable
+        #region IComparableT
 
         /// <summary>
         /// Compares to blob objects according to their score - lower scores preceding higher scores
         /// </summary>
         /// <param name="obj"></param>
         /// <returns></returns>
-        public int CompareTo(object obj)
+        public int CompareTo(BlobWithMoments otherBlob)
         {
             //We precede null
-            if (obj == null)
-                return -1;
-            Blob otherBlob = obj as Blob;
             if (otherBlob == null)
-                throw new ArgumentException("Object is not a blob");
+                return -1;
             else
             {
                 return this.Score.CompareTo(otherBlob.Score);
