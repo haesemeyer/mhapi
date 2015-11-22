@@ -418,6 +418,8 @@ namespace MHApi.Imaging
             Moment12 = m12;
         }
 
+        #endregion
+
         /// <summary>
         /// Sets all moment values of the blob back to their default value 0
         /// </summary>
@@ -435,7 +437,20 @@ namespace MHApi.Imaging
             Moment12 = 0;
         }
 
-        #endregion
+        /// <summary>
+        /// Updates the bounding box without requiring IppiRect
+        /// </summary>
+        /// <param name="x">The top-left x coordinate</param>
+        /// <param name="y">The top-left y coordinate</param>
+        /// <param name="width">The width</param>
+        /// <param name="height">The height</param>
+        public void UpdateBoundingBox(int x, int y, int width, int height)
+        {
+            _boundingBoxUpperLeft.x = x;
+            _boundingBoxUpperLeft.y = y;
+            _boundingBoxLowerRight.x = x + width - 1;
+            _boundingBoxLowerRight.y = y + height - 1;
+        }
 
         /// <summary>
         /// Adds a new pixel to the blob
