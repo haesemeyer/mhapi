@@ -373,7 +373,7 @@ namespace MHApi.Imaging
         /// </summary>
         /// <param name="m00">The zero's order moment (area)</param>        
         /// <param name="m10">The x=1 y=0 first order moment</param>
-        /// /// <param name="m01">The x=0 y=1 first order moment</param>
+        /// <param name="m01">The x=0 y=1 first order moment</param>
         /// <param name="m20">The x=2 y=0 second order moment</param>
         /// <param name="m11">The x=1 y=1 second order moment</param>
         /// <param name="m02">The x=0 y=2 second order moment</param>
@@ -391,6 +391,48 @@ namespace MHApi.Imaging
             Moment03 = m03;
             Moment21 = m21;
             Moment12 = m12;
+        }
+
+        /// <summary>
+        /// Updates the values of all moments stored in the blob
+        /// </summary>
+        /// <param name="m00">The zero's order moment (area)</param>        
+        /// <param name="m10">The x=1 y=0 first order moment</param>
+        /// <param name="m01">The x=0 y=1 first order moment</param>
+        /// <param name="m20">The x=2 y=0 second order moment</param>
+        /// <param name="m11">The x=1 y=1 second order moment</param>
+        /// <param name="m02">The x=0 y=2 second order moment</param>
+        /// <param name="m30">The x=3 y=0 third order moment</param>
+        /// <param name="m03">The x=0 y=3 third order moment</param>
+        public void UpdateBlob(long m00, long m10, long m01, long m20, long m11, long m02, long m30, long m03, long m21, long m12)
+        {
+            Moment00 = m00;
+            Moment10 = m10;
+            Moment01 = m01;
+            Moment20 = m20;
+            Moment11 = m11;
+            Moment02 = m02;
+            Moment30 = m30;
+            Moment03 = m03;
+            Moment21 = m21;
+            Moment12 = m12;
+        }
+
+        /// <summary>
+        /// Sets all moment values of the blob back to their default value 0
+        /// </summary>
+        public void ResetBlob()
+        {
+            Moment00 = 0;
+            Moment01 = 0;
+            Moment10 = 0;
+            Moment20 = 0;
+            Moment11 = 0;
+            Moment02 = 0;
+            Moment30 = 0;
+            Moment03 = 0;
+            Moment21 = 0;
+            Moment12 = 0;
         }
 
         #endregion
