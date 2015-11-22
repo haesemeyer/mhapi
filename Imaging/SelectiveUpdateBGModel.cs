@@ -92,10 +92,10 @@ namespace MHApi.Imaging
             }
         }
 
-        public override void Dispose()
+        protected override void Dispose(bool disposing)
         {
             _updateMask.Dispose();
-            base.Dispose();
+            base.Dispose(disposing);
         }
     }
 }

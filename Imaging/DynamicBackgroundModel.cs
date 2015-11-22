@@ -1,7 +1,6 @@
 ﻿using System;
 using ipp;
 using MHApi.DrewsClasses;
-using MHApi.Imaging;
 
 namespace MHApi.Imaging
 {
@@ -43,9 +42,9 @@ namespace MHApi.Imaging
             FractionUpdate = fUpdate;
         }
 
-        public override void Dispose()
+        protected override void Dispose(bool disposing)
         {
-            base.Dispose();
+            base.Dispose(disposing);
         }
     }
 }

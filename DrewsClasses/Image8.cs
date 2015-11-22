@@ -55,6 +55,8 @@ namespace MHApi.DrewsClasses {
         {
             get
             {
+                if (IsDisposed)
+                    throw new ObjectDisposedException("Image8");
                 if (x >= Width || y >= Height)
                 {
                     throw new IndexOutOfRangeException("The indexed point lies outside of the image");
@@ -72,6 +74,8 @@ namespace MHApi.DrewsClasses {
         {
             get
             {
+                if (IsDisposed)
+                    throw new ObjectDisposedException("Image8");
                 if (point.x >= Width || point.y >= Height)
                 {
                     throw new IndexOutOfRangeException("The indexed point lies outside of the image");
@@ -84,7 +88,6 @@ namespace MHApi.DrewsClasses {
         /// Imagesize
         /// </summary>
         public IppiSize Size;
-        //float[] scalingBuffer;
 
         public Image8(int width, int height) {
             Stride = (int)(4 * Math.Ceiling(width / 4.0));
@@ -94,28 +97,26 @@ namespace MHApi.DrewsClasses {
 
         public Image8(IppiSize imageSize) : this(imageSize.width, imageSize.height) { }
 
-        /*public void FromImage16(Image16 im, float cMax) {
-            if (im.Width != Width || im.Height != Height)
-                throw new NotImplementedException("Width and Height must match");
-            if (scalingBuffer == null || scalingBuffer.Length < im.Width * im.Height)
-                scalingBuffer = new float[im.Width * im.Height];
-            fixed (float* pScalingBuffer = scalingBuffer) {
-                ip.ippiConvert_16u32f_C1R(im.Image, im.Stride, pScalingBuffer, 4 * im.Width, im.Size);
-                ip.ippiScale_32f8u_C1R(pScalingBuffer, 4 * im.Width, Image, Stride, Size, 0, cMax);
-            }
-        }*/
-
         #region IDisposable Members
 
-        bool isDisposed;
+        public bool IsDisposed { get; private set; }
+
+
         public void Dispose() {
-            if (isDisposed) return;
+            if (IsDisposed)
+                return;
+            Dispose(true);
+            GC.SuppressFinalize(this);
+            IsDisposed = true;
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
             Marshal.FreeHGlobal((IntPtr)Image);
-            isDisposed = true;
         }
 
         ~Image8() {
-            Dispose();
+            Dispose(false);
         }
 
         #endregion
