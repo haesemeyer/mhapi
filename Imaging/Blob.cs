@@ -16,6 +16,7 @@ namespace MHApi.Imaging
     /// <summary>
     /// Describes a blob in an image (analogous to the structures returned by regionprops in MATLAB)
     /// </summary>
+    [Obsolete("Consinder using BlobWithMoments instead.")]
     public sealed class Blob : IComparable
     {
         /// <summary>
