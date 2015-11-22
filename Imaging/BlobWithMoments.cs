@@ -151,13 +151,6 @@ namespace MHApi.Imaging
             {
                 return new IppiRect(_boundingBoxUpperLeft.x, _boundingBoxUpperLeft.y, _boundingBoxLowerRight.x - _boundingBoxUpperLeft.x+1, _boundingBoxLowerRight.y - _boundingBoxUpperLeft.y+1);
             }
-            set
-            {
-                _boundingBoxUpperLeft.x = value.x;
-                _boundingBoxUpperLeft.y = value.y;
-                _boundingBoxLowerRight.x = value.x + value.width - 1;
-                _boundingBoxLowerRight.y = value.y + value.height - 1;
-            }
         }
 
         /// <summary>
