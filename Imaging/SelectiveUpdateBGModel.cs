@@ -31,6 +31,7 @@ namespace MHApi.Imaging
         /// </summary>
         /// <param name="im">The new image to add to the background</param>
         /// <param name="regionsToExclude">The blobs that should be excluded from the update</param>
+        [Obsolete("Don't use Blob[] version but use BlobWithMoments[] version of method.")]
         public virtual void UpdateBackground(Image8 im, Blob[] regionsToExclude)
         {
             if (regionsToExclude == null)//do a simple update
