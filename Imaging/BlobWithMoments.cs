@@ -21,12 +21,12 @@ namespace MHApi.Imaging
         /// <summary>
         /// The upper-left corner of the bounding box
         /// </summary>
-        IppiPoint _boundingBoxUpperLeft;
+        IppiPoint _boundingBoxUpperLeft = new IppiPoint();
 
         /// <summary>
         /// The lower-right corner of the bounding box
         /// </summary>
-        IppiPoint _boundingBoxLowerRight;
+        IppiPoint _boundingBoxLowerRight = new IppiPoint();
 
         /// <summary>
         /// The score of the blob given by a tracking algorithm
@@ -150,6 +150,36 @@ namespace MHApi.Imaging
             get
             {
                 return new IppiRect(_boundingBoxUpperLeft.x, _boundingBoxUpperLeft.y, _boundingBoxLowerRight.x - _boundingBoxUpperLeft.x+1, _boundingBoxLowerRight.y - _boundingBoxUpperLeft.y+1);
+            }
+        }
+
+        /// <summary>
+        /// The top left corner of the bounding box
+        /// </summary>
+        public IppiPoint BB_TopLeft
+        {
+            get
+            {
+                return _boundingBoxUpperLeft;
+            }
+        }
+
+        /// <summary>
+        /// The bottom right corner of the bounding box
+        /// </summary>
+        public IppiPoint BB_BottomRight
+        {
+            get
+            {
+                return _boundingBoxLowerRight;
+            }
+        }
+
+        public IppiSize BB_Size
+        {
+            get
+            {
+                return new IppiSize(_boundingBoxLowerRight.x - _boundingBoxUpperLeft.x + 1, _boundingBoxLowerRight.y - _boundingBoxUpperLeft.y + 1);
             }
         }
 
