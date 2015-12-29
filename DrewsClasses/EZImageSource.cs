@@ -8,7 +8,7 @@ using ipp;
 using MHApi.Utilities;
 
 namespace MHApi.DrewsClasses {
-    public unsafe class EZImageSource : INotifyPropertyChanged {
+    public unsafe class EZImageSource : PropertyChangeNotification {
         Image8 imageRaw, imageScaled;
 
         WriteableBitmap imageSource;
@@ -87,15 +87,5 @@ namespace MHApi.DrewsClasses {
                 throw new OperationCanceledException();
         }
 
-        #region INotifyPropertyChanged Members
-
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        void RaisePropertyChanged(string name) {
-            if (PropertyChanged != null)
-                PropertyChanged(this, new PropertyChangedEventArgs(name));
-        }
-
-        #endregion
     }
 }
