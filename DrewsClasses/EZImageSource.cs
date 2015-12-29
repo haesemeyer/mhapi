@@ -26,6 +26,11 @@ namespace MHApi.DrewsClasses {
         WriteableBitmap imageSource;
 
         /// <summary>
+        /// To ensure we don't dispose images during a write
+        /// </summary>
+        object _disposeLock = new object();
+
+        /// <summary>
         /// The windows image source
         /// </summary>
         public WriteableBitmap ImageSource {
@@ -78,7 +83,10 @@ namespace MHApi.DrewsClasses {
             imageScaled = new Image8(imageRaw.Width, imageRaw.Height);
             ///create the actual windows image source on the UI thread
             DispatcherHelper.UIDispatcher.Invoke(new Action(() => {
-                ImageSource = new WriteableBitmap(imageRaw.Width, imageRaw.Height, 96, 96, PixelFormats.Gray8, null);
+                lock (_disposeLock)
+                {
+                    ImageSource = new WriteableBitmap(imageRaw.Width, imageRaw.Height, 96, 96, PixelFormats.Gray8, null);
+                }
             }));
             //initialize CMax
             cMax = 255;
@@ -104,7 +112,11 @@ namespace MHApi.DrewsClasses {
                 var done = new AutoResetEvent(false);
                 DispatcherHelper.CheckBeginInvokeOnUI(() =>
                 {
-                    ImageSource = new WriteableBitmap(imageRaw.Width, imageRaw.Height, 96, 96, PixelFormats.Gray8, null);
+                    if (!IsDisposed)
+                        lock (_disposeLock)
+                        {
+                            ImageSource = new WriteableBitmap(imageRaw.Width, imageRaw.Height, 96, 96, PixelFormats.Gray8, null);
+                        }
                     done.Set();
                 });
                 //wait for our done event, indicating that the bitmap has been created (index 1) or
@@ -130,7 +142,11 @@ namespace MHApi.DrewsClasses {
             var done = new AutoResetEvent(false);
             //write raw image to screen
             DispatcherHelper.CheckBeginInvokeOnUI(() => {
-                ImageSource.WritePixels(new Int32Rect(0, 0, imageRaw.Width, imageRaw.Height), (IntPtr)imageRaw.Image, imageRaw.Stride * imageRaw.Height, imageRaw.Stride);
+                if (!IsDisposed)
+                    lock (_disposeLock)
+                    {
+                        ImageSource.WritePixels(new Int32Rect(0, 0, imageRaw.Width, imageRaw.Height), (IntPtr)imageRaw.Image, imageRaw.Stride * imageRaw.Height, imageRaw.Stride);
+                    }
                 done.Set();
             });
             //Block on UI thread until either we are asked to stop or write operation is finished
@@ -151,7 +167,11 @@ namespace MHApi.DrewsClasses {
             var done = new AutoResetEvent(false);
             //write scaled image to screen
             DispatcherHelper.CheckBeginInvokeOnUI(() => {
-                ImageSource.WritePixels(new Int32Rect(0, 0, imageRaw.Width, imageRaw.Height), (IntPtr)imageScaled.Image, imageScaled.Stride * imageScaled.Height, imageScaled.Stride);
+                if (!IsDisposed)
+                    lock (_disposeLock)
+                    {
+                        ImageSource.WritePixels(new Int32Rect(0, 0, imageRaw.Width, imageRaw.Height), (IntPtr)imageScaled.Image, imageScaled.Stride * imageScaled.Height, imageScaled.Stride);
+                    }
                 done.Set();
             });
             //Block on UI thread until either we are asked to stop or write operation is finished
@@ -172,7 +192,11 @@ namespace MHApi.DrewsClasses {
             var done = new AutoResetEvent(false);
             //write scaled image to screen
             DispatcherHelper.CheckBeginInvokeOnUI(() => {
-                ImageSource.WritePixels(new Int32Rect(0, 0, imageRaw.Width, imageRaw.Height), (IntPtr)imageScaled.Image, imageScaled.Stride * imageScaled.Height, imageScaled.Stride);
+                if (!IsDisposed)
+                    lock (_disposeLock)
+                    {
+                        ImageSource.WritePixels(new Int32Rect(0, 0, imageRaw.Width, imageRaw.Height), (IntPtr)imageScaled.Image, imageScaled.Stride * imageScaled.Height, imageScaled.Stride);
+                    }
                 done.Set();
             });
             //Block on UI thread until we either time out or write operation is finished
@@ -193,15 +217,18 @@ namespace MHApi.DrewsClasses {
             {
                 if (disposing)
                 {
-                    if (imageRaw != null)
+                    lock (_disposeLock)
                     {
-                        imageRaw.Dispose();
-                        imageRaw = null;
-                    }
-                    if (imageScaled != null)
-                    {
-                        imageScaled.Dispose();
-                        imageScaled = null;
+                        if (imageRaw != null)
+                        {
+                            imageRaw.Dispose();
+                            imageRaw = null;
+                        }
+                        if (imageScaled != null)
+                        {
+                            imageScaled.Dispose();
+                            imageScaled = null;
+                        }
                     }
                 }
 
