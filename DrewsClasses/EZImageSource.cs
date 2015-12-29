@@ -113,11 +113,31 @@ namespace MHApi.DrewsClasses {
             //copy the new image into image-raw
             ip.ippiCopy_8u_C1R(image.Image, image.Stride, imageRaw.Image, imageRaw.Stride, image.Size);
             //scale image if necessary and write to screen
-            UpdateImageScaled(cancel);
+            if (cMax < 255)
+                UpdateImageScaled(cancel);
+            else
+                UpdateImage(cancel);
         }
 
         /// <summary>
-        /// Update scaled version of the image if necessary
+        /// Write raw version of the image to screen
+        /// </summary>
+        /// <param name="cancel">Signals us to stop</param>
+        void UpdateImage(AutoResetEvent cancel)
+        {
+            var done = new AutoResetEvent(false);
+            //write raw image to screen
+            DispatcherHelper.CheckBeginInvokeOnUI(() => {
+                ImageSource.WritePixels(new Int32Rect(0, 0, imageRaw.Width, imageRaw.Height), (IntPtr)imageRaw.Image, imageRaw.Stride * imageRaw.Height, imageRaw.Stride);
+                done.Set();
+            });
+            //Block on UI thread until either we are asked to stop or write operation is finished
+            if (WaitHandle.WaitAny(new[] { cancel, done }) == 0)
+                throw new OperationCanceledException();
+        }
+
+        /// <summary>
+        /// Update scaled version of the image
         /// and write to screen
         /// </summary>
         /// <param name="cancel">Signals us to stop</param>
@@ -138,7 +158,7 @@ namespace MHApi.DrewsClasses {
         }
 
         /// <summary>
-        /// Update scaled version of the image if necessary
+        /// Update scaled version of the image
         /// and write to screen
         /// </summary>
         /// <param name="timeout">Timeout of write operation</param>
