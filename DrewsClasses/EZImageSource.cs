@@ -8,7 +8,7 @@ using ipp;
 using MHApi.Utilities;
 
 namespace MHApi.DrewsClasses {
-    public unsafe class EZImageSource : PropertyChangeNotification {
+    public unsafe sealed class EZImageSource : PropertyChangeNotification, IDisposable {
 
         /// <summary>
         /// Raw version of the image
@@ -90,6 +90,8 @@ namespace MHApi.DrewsClasses {
         /// <param name="image">The image to write</param>
         /// <param name="cancel">Thread signal to cancel the write</param>
         public void Write(Image8 image, AutoResetEvent cancel) {
+            if (IsDisposed)
+                throw new ObjectDisposedException("EZImageSource");
             //if image sizes don't match re-initialize raw image, scaled image and UI image
             if (imageRaw.Width != image.Width || imageRaw.Height != image.Height)
             {
@@ -177,6 +179,43 @@ namespace MHApi.DrewsClasses {
             if (!done.WaitOne(timeout))
                 throw new OperationCanceledException();
         }
+
+        #region IDisposable Support
+
+        public bool IsDisposed
+        {
+            get; private set;
+        }
+
+        void Dispose(bool disposing)
+        {
+            if (!IsDisposed)
+            {
+                if (disposing)
+                {
+                    if (imageRaw != null)
+                    {
+                        imageRaw.Dispose();
+                        imageRaw = null;
+                    }
+                    if (imageScaled != null)
+                    {
+                        imageScaled.Dispose();
+                        imageScaled = null;
+                    }
+                }
+
+                IsDisposed = true;
+            }
+        }
+
+        // This code added to correctly implement the disposable pattern.
+        public void Dispose()
+        {
+            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+            Dispose(true);
+        }
+        #endregion
 
     }
 }
