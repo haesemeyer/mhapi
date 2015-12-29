@@ -18,9 +18,22 @@ namespace MHApi.DrewsClasses {
         }
 
         double cMax;
+
+        /// <summary>
+        /// Brightness scale - pixel values
+        /// >=cMax will be set to 255
+        /// </summary>
         public double CMax {
             get { return cMax; }
-            set { cMax = value; UpdateImageScaled(1000); RaisePropertyChanged("CMax"); }
+            set
+            {
+                if (cMax < 0 || cMax > 255)
+                    throw new ArgumentOutOfRangeException("CMax", "CMax has to be >=0 and <=255");
+                cMax = value;
+                //redraw newly scaled image
+                UpdateImageScaled(1000);
+                RaisePropertyChanged("CMax");
+            }
         }
 
         public int Width {
