@@ -109,15 +109,15 @@ namespace MHApi.DrewsClasses {
                 var done = new AutoResetEvent(false);
                 DispatcherHelper.CheckBeginInvokeOnUI(() =>
                 {
-                    if (!IsDisposed)
-                        //this lock is only necessary because below after a cancel we don't wait on done - therefore upon asking the parent
-                        //thread to stop, the call to Write will return, the thread will stop and disposal continues potentially disposing
-                        //resources that are being used during the write (imageRaw, imageScaled, etc.). Hence an alternative would be to
-                        //wait on done after cancel has been signaled.
-                        lock (_disposeLock)
-                        {
+                    //this lock is only necessary because below after a cancel we don't wait on done - therefore upon asking the parent
+                    //thread to stop, the call to Write will return, the thread will stop and disposal continues potentially disposing
+                    //resources that are being used during the write (imageRaw, imageScaled, etc.). Hence an alternative would be to
+                    //wait on done after cancel has been signaled.
+                    lock (_disposeLock)
+                    {
+                        if (!IsDisposed)
                             ImageSource = new WriteableBitmap(imageRaw.Width, imageRaw.Height, 96, 96, PixelFormats.Gray8, null);
-                        }
+                    }
                     done.Set();
                 });
                 //wait for our done event, indicating that the bitmap has been created (index 1) or
@@ -142,16 +142,17 @@ namespace MHApi.DrewsClasses {
         {
             var done = new AutoResetEvent(false);
             //write raw image to screen
-            DispatcherHelper.CheckBeginInvokeOnUI(() => {
-                if (!IsDisposed)
-                    //this lock is only necessary because below after a cancel we don't wait on done - therefore upon asking the parent
-                    //thread to stop, the call to UpdateImage will return, the thread will stop and disposal continues potentially disposing
-                    //resources that are being used during the write (imageRaw, imageScaled, etc.). Hence an alternative would be to
-                    //wait on done after cancel has been signaled.
-                    lock (_disposeLock)
-                    {
+            DispatcherHelper.CheckBeginInvokeOnUI(() =>
+            {
+                //this lock is only necessary because below after a cancel we don't wait on done - therefore upon asking the parent
+                //thread to stop, the call to UpdateImage will return, the thread will stop and disposal continues potentially disposing
+                //resources that are being used during the write (imageRaw, imageScaled, etc.). Hence an alternative would be to
+                //wait on done after cancel has been signaled.
+                lock (_disposeLock)
+                {
+                    if (!IsDisposed)
                         ImageSource.WritePixels(new Int32Rect(0, 0, imageRaw.Width, imageRaw.Height), (IntPtr)imageRaw.Image, imageRaw.Stride * imageRaw.Height, imageRaw.Stride);
-                    }
+                }
                 done.Set();
             });
             //Block on UI thread until either we are asked to stop or write operation is finished
@@ -171,16 +172,17 @@ namespace MHApi.DrewsClasses {
             ip.ippiMulC_8u_C1IRSfs((byte)(255 / CMax), imageScaled.Image, imageScaled.Stride, imageScaled.Size, 0);
             var done = new AutoResetEvent(false);
             //write scaled image to screen
-            DispatcherHelper.CheckBeginInvokeOnUI(() => {
-                if (!IsDisposed)
-                    //this lock is only necessary because below after a cancel we don't wait on done - therefore upon asking the parent
-                    //thread to stop, the call to UpdateImageScaled will return, the thread will stop and disposal continues potentially disposing
-                    //resources that are being used during the write (imageRaw, imageScaled, etc.). Hence an alternative would be to
-                    //wait on done after cancel has been signaled.
-                    lock (_disposeLock)
-                    {
+            DispatcherHelper.CheckBeginInvokeOnUI(() =>
+            {
+                //this lock is only necessary because below after a cancel we don't wait on done - therefore upon asking the parent
+                //thread to stop, the call to UpdateImageScaled will return, the thread will stop and disposal continues potentially disposing
+                //resources that are being used during the write (imageRaw, imageScaled, etc.). Hence an alternative would be to
+                //wait on done after cancel has been signaled.
+                lock (_disposeLock)
+                {
+                    if (!IsDisposed)
                         ImageSource.WritePixels(new Int32Rect(0, 0, imageRaw.Width, imageRaw.Height), (IntPtr)imageScaled.Image, imageScaled.Stride * imageScaled.Height, imageScaled.Stride);
-                    }
+                }
                 done.Set();
             });
             //Block on UI thread until either we are asked to stop or write operation is finished
@@ -200,16 +202,17 @@ namespace MHApi.DrewsClasses {
             ip.ippiMulC_8u_C1IRSfs((byte)(255 / CMax), imageScaled.Image, imageScaled.Stride, imageScaled.Size, 0);
             var done = new AutoResetEvent(false);
             //write scaled image to screen
-            DispatcherHelper.CheckBeginInvokeOnUI(() => {
-                if (!IsDisposed)
-                    //this lock is only necessary because below after a cancel we don't wait on done - therefore upon asking the parent
-                    //thread to stop, the call to UpdateImageScaled will return, the thread will stop and disposal continues potentially disposing
-                    //resources that are being used during the write (imageRaw, imageScaled, etc.). Hence an alternative would be to
-                    //wait on done after cancel has been signaled.
-                    lock (_disposeLock)
-                    {
+            DispatcherHelper.CheckBeginInvokeOnUI(() =>
+            {
+                //this lock is only necessary because below after a cancel we don't wait on done - therefore upon asking the parent
+                //thread to stop, the call to UpdateImageScaled will return, the thread will stop and disposal continues potentially disposing
+                //resources that are being used during the write (imageRaw, imageScaled, etc.). Hence an alternative would be to
+                //wait on done after cancel has been signaled.
+                lock (_disposeLock)
+                {
+                    if (!IsDisposed)
                         ImageSource.WritePixels(new Int32Rect(0, 0, imageRaw.Width, imageRaw.Height), (IntPtr)imageScaled.Image, imageScaled.Stride * imageScaled.Height, imageScaled.Stride);
-                    }
+                }
                 done.Set();
             });
             //Block on UI thread until we either time out or write operation is finished
