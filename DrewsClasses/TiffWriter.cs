@@ -5,11 +5,9 @@ using System.IO;
 using System.Runtime.InteropServices;
 
 namespace MHApi.DrewsClasses {
-    public class TiffWriter : IDisposable {
-        bool IsDisposed;
+    public sealed class TiffWriter : IDisposable {
+        public bool IsDisposed { get; private set; }
         string baseName;
-
-        //string CurrentFileNameWithExtension { get { return fileIndex == 0 ? baseName + ".tif" : baseName + "_" + fileIndex + ".tif"; } }
 
         string CurrentFileNameWithExtension { get { return baseName + "_" + fileIndex.ToString("D4") + ".tif"; } }
 
@@ -39,7 +37,7 @@ namespace MHApi.DrewsClasses {
             if (File.Exists(CurrentFileNameWithExtension))
             {
                 if (!renameIfExists)
-                    throw new Exception("TiffWriter error: File " + CurrentFileNameWithExtension + " already exists");
+                    throw new IOException("TiffWriter error: File " + CurrentFileNameWithExtension + " already exists");
                 else
                 {
                     string fWoExtension = Path.GetFileNameWithoutExtension(fileName);
@@ -169,10 +167,10 @@ namespace MHApi.DrewsClasses {
                 pFirstIm = IntPtr.Zero;
             }
             IsDisposed = true;
+            GC.SuppressFinalize(this);
         }
 
         ~TiffWriter() {
-            if (IsDisposed) return;
             System.Diagnostics.Debug.WriteLine("IDisposable class " + ToString() + " finalized without being disposed first. Always call Dispose() to allow class to clean up");
             Dispose();
         }
