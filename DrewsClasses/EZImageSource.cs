@@ -75,12 +75,15 @@ namespace MHApi.DrewsClasses {
             get { return imageRaw.Height; }
         }
 
+        private Int32Rect _imageRect;
+
         /// <summary>
         /// Create new image source
         /// </summary>
         public EZImageSource() {
             imageRaw = new Image8(100, 100);
             imageScaled = new Image8(imageRaw.Width, imageRaw.Height);
+            _imageRect = new Int32Rect(0, 0, imageRaw.Width, imageRaw.Height);
             ///create the actual windows image source on the UI thread
             DispatcherHelper.UIDispatcher.Invoke(new Action(() => {
                 ImageSource = new WriteableBitmap(imageRaw.Width, imageRaw.Height, 96, 96, PixelFormats.Gray8, null);               
@@ -106,6 +109,7 @@ namespace MHApi.DrewsClasses {
                 if (imageScaled != null)
                     imageScaled.Dispose();
                 imageScaled = new Image8(image.Width, image.Height);
+                _imageRect = new Int32Rect(0, 0, imageRaw.Width, imageRaw.Height);
                 var done = new AutoResetEvent(false);
                 DispatcherHelper.CheckBeginInvokeOnUI(() =>
                 {
@@ -151,7 +155,7 @@ namespace MHApi.DrewsClasses {
                 lock (_disposeLock)
                 {
                     if (!IsDisposed)
-                        ImageSource.WritePixels(new Int32Rect(0, 0, imageRaw.Width, imageRaw.Height), (IntPtr)imageRaw.Image, imageRaw.Stride * imageRaw.Height, imageRaw.Stride);
+                        ImageSource.WritePixels(_imageRect, (IntPtr)imageRaw.Image, imageRaw.Stride * imageRaw.Height, imageRaw.Stride);
                 }
                 done.Set();
             });
@@ -181,7 +185,7 @@ namespace MHApi.DrewsClasses {
                 lock (_disposeLock)
                 {
                     if (!IsDisposed)
-                        ImageSource.WritePixels(new Int32Rect(0, 0, imageRaw.Width, imageRaw.Height), (IntPtr)imageScaled.Image, imageScaled.Stride * imageScaled.Height, imageScaled.Stride);
+                        ImageSource.WritePixels(_imageRect, (IntPtr)imageScaled.Image, imageScaled.Stride * imageScaled.Height, imageScaled.Stride);
                 }
                 done.Set();
             });
@@ -211,7 +215,7 @@ namespace MHApi.DrewsClasses {
                 lock (_disposeLock)
                 {
                     if (!IsDisposed)
-                        ImageSource.WritePixels(new Int32Rect(0, 0, imageRaw.Width, imageRaw.Height), (IntPtr)imageScaled.Image, imageScaled.Stride * imageScaled.Height, imageScaled.Stride);
+                        ImageSource.WritePixels(_imageRect, (IntPtr)imageScaled.Image, imageScaled.Stride * imageScaled.Height, imageScaled.Stride);
                 }
                 done.Set();
             });
