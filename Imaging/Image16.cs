@@ -21,6 +21,17 @@ namespace MHApi.Imaging
         public readonly int Width, Height, Stride;
         public readonly IppiSize Size;
 
+        /// <summary>
+        /// Indicates how our memory was acquired - MemoryAllocation
+        /// or via pinned GC object
+        /// </summary>
+        private bool _isFromPinned;
+
+        /// <summary>
+        /// Buffer handle in case of pinned object
+        /// </summary>
+        private GCHandle _hImage;
+
         //Construct image with 1 channel and 16bit for each pixel from scratch
         public Image16(int width, int height) {
             Width = width;
@@ -28,6 +39,30 @@ namespace MHApi.Imaging
             Size = new IppiSize(width,height);
             Stride = (int)(4 * Math.Ceiling(width * 2 / 4.0));
             Image = (ushort*)Marshal.AllocHGlobal(Stride * height).ToPointer();
+            _isFromPinned = false;
+        }
+
+        /// <summary>
+        /// Allocate a new Image16 object directly from a pinned
+        /// garbage collected memory buffer
+        /// </summary>
+        /// <param name="imageBuffer">2D image buffer, 4byte aligned</param>
+        public Image16(ushort[,] imageBuffer)
+        {
+            Height = imageBuffer.GetLength(0);
+            Width = imageBuffer.GetLength(1);
+            Stride = (int)(4 * Math.Ceiling(2.0 * Width / 4.0));
+            if (Stride != 2 * Width)
+                throw new ArgumentException("Can only accept 4-byte aligned 2D image buffers!");
+            Size = new IppiSize(Width, Height);
+            _hImage = GCHandle.Alloc(imageBuffer, GCHandleType.Pinned);
+            Image = (ushort*)_hImage.AddrOfPinnedObject().ToPointer();
+            _isFromPinned = true;
+        }
+
+        public static explicit operator Image16(ushort[,] imageBuffer)
+        {
+            return new Image16(imageBuffer);
         }
 
         //Construct 16-bit image using an 8-bit unsigned image as input
@@ -39,6 +74,7 @@ namespace MHApi.Imaging
             Image = (ushort*)Marshal.AllocHGlobal(Stride * Height).ToPointer();
             //scale, convert and copy image
             IppHelper.IppCheckCall(ip.ippiScale_8u16u_C1R(im.Image, im.Stride, Image, Stride, Size));
+            _isFromPinned = false;
         }
 
         /// <summary>
@@ -87,11 +123,16 @@ namespace MHApi.Imaging
         }
         
         #region IDisposable Members
-        bool isDisposed;
+        public bool IsDisposed { get; set; }
+
         public void Dispose() {
-            if (isDisposed) return;
-            Marshal.FreeHGlobal((IntPtr)Image);
-            isDisposed = true;
+            if (IsDisposed) return;
+            GC.SuppressFinalize(this);
+            if (!_isFromPinned)
+                Marshal.FreeHGlobal((IntPtr)Image);
+            else
+                _hImage.Free();
+            IsDisposed = true;
         }
 
         ~Image16() {
