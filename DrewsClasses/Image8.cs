@@ -7,12 +7,16 @@ using System;
 using System.Runtime.InteropServices;
 using ipp;
 
+using MHApi.Imaging;
+
 namespace MHApi.DrewsClasses {
 
     /// <summary>
     /// Class to encapsulate an 8bit image in raw memory
     /// </summary>
     public unsafe class Image8 : IDisposable {
+
+        private float[] _scalingBuffer;
         
         /// <summary>
         /// Pointer to the image in memory
@@ -94,24 +98,27 @@ namespace MHApi.DrewsClasses {
 
         public Image8(IppiSize imageSize) : this(imageSize.width, imageSize.height) { }
 
-        /*public void FromImage16(Image16 im, float cMax) {
+        public void FromImage16(Image16 im, float cMax) {
             if (im.Width != Width || im.Height != Height)
-                throw new NotImplementedException("Width and Height must match");
-            if (scalingBuffer == null || scalingBuffer.Length < im.Width * im.Height)
-                scalingBuffer = new float[im.Width * im.Height];
-            fixed (float* pScalingBuffer = scalingBuffer) {
+                throw new ArgumentException("Width and Height must match");
+            if (_scalingBuffer == null || _scalingBuffer.Length < im.Width * im.Height)
+                _scalingBuffer = new float[im.Width * im.Height];
+            fixed (float* pScalingBuffer = _scalingBuffer) {
                 ip.ippiConvert_16u32f_C1R(im.Image, im.Stride, pScalingBuffer, 4 * im.Width, im.Size);
                 ip.ippiScale_32f8u_C1R(pScalingBuffer, 4 * im.Width, Image, Stride, Size, 0, cMax);
             }
-        }*/
+        }
 
         #region IDisposable Members
 
-        bool isDisposed;
+        public bool IsDisposed { get; private set; }
+
         public void Dispose() {
-            if (isDisposed) return;
-            Marshal.FreeHGlobal((IntPtr)Image);
-            isDisposed = true;
+            if (IsDisposed) return;
+            GC.SuppressFinalize(this);
+            if(Image != null)
+                Marshal.FreeHGlobal((IntPtr)Image);
+            IsDisposed = true;
         }
 
         ~Image8() {
