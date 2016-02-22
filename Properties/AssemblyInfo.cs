@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("HarvardUniversity")]
 [assembly: AssemblyProduct("MHApi")]
-[assembly: AssemblyCopyright("Copyright © Martin Haesemeyer 2011, with code by DrewRobson and RexNebular(Codeproject), DispatcherHelper by Laurent Bugnion")]
+[assembly: AssemblyCopyright("Copyright © Martin Haesemeyer 2011-2016, with code by DrewRobson and RexNebular(Codeproject), DispatcherHelper by Laurent Bugnion")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
