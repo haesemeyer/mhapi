@@ -88,7 +88,6 @@ namespace MHApi.DrewsClasses {
         /// Imagesize
         /// </summary>
         public IppiSize Size;
-        //float[] scalingBuffer;
 
         public Image8(int width, int height) {
             Stride = (int)(4 * Math.Ceiling(width / 4.0));

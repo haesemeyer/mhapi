@@ -143,7 +143,6 @@ namespace MHApi.Threading
         {
             if (IsDisposed)
                 return;
-            GC.SuppressFinalize(this);
             if (disposing)
             {
                 if (IsRunning)
@@ -164,6 +163,7 @@ namespace MHApi.Threading
         public void Dispose()
         {
             Dispose(true);
+            GC.SuppressFinalize(this);
         }
 
         ~WorkerT()

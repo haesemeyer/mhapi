@@ -13,7 +13,7 @@ namespace MHApi.Imaging
     /// Describes a blob in an image (analogous to the structures returned by regionprops in MATLAB)
     /// together with the blob's moments
     /// </summary>
-    public unsafe sealed class BlobWithMoments : IComparable
+    public unsafe sealed class BlobWithMoments : IComparable<BlobWithMoments>
     {
 
         #region Fields
@@ -21,12 +21,12 @@ namespace MHApi.Imaging
         /// <summary>
         /// The upper-left corner of the bounding box
         /// </summary>
-        IppiPoint _boundingBoxUpperLeft;
+        IppiPoint _boundingBoxUpperLeft = new IppiPoint();
 
         /// <summary>
         /// The lower-right corner of the bounding box
         /// </summary>
-        IppiPoint _boundingBoxLowerRight;
+        IppiPoint _boundingBoxLowerRight = new IppiPoint();
 
         /// <summary>
         /// The score of the blob given by a tracking algorithm
@@ -151,12 +151,35 @@ namespace MHApi.Imaging
             {
                 return new IppiRect(_boundingBoxUpperLeft.x, _boundingBoxUpperLeft.y, _boundingBoxLowerRight.x - _boundingBoxUpperLeft.x+1, _boundingBoxLowerRight.y - _boundingBoxUpperLeft.y+1);
             }
-            set
+        }
+
+        /// <summary>
+        /// The top left corner of the bounding box
+        /// </summary>
+        public IppiPoint BB_TopLeft
+        {
+            get
             {
-                _boundingBoxUpperLeft.x = value.x;
-                _boundingBoxUpperLeft.y = value.y;
-                _boundingBoxLowerRight.x = value.x + value.width - 1;
-                _boundingBoxLowerRight.y = value.y + value.height - 1;
+                return _boundingBoxUpperLeft;
+            }
+        }
+
+        /// <summary>
+        /// The bottom right corner of the bounding box
+        /// </summary>
+        public IppiPoint BB_BottomRight
+        {
+            get
+            {
+                return _boundingBoxLowerRight;
+            }
+        }
+
+        public IppiSize BB_Size
+        {
+            get
+            {
+                return new IppiSize(_boundingBoxLowerRight.x - _boundingBoxUpperLeft.x + 1, _boundingBoxLowerRight.y - _boundingBoxUpperLeft.y + 1);
             }
         }
 
@@ -373,7 +396,7 @@ namespace MHApi.Imaging
         /// </summary>
         /// <param name="m00">The zero's order moment (area)</param>        
         /// <param name="m10">The x=1 y=0 first order moment</param>
-        /// /// <param name="m01">The x=0 y=1 first order moment</param>
+        /// <param name="m01">The x=0 y=1 first order moment</param>
         /// <param name="m20">The x=2 y=0 second order moment</param>
         /// <param name="m11">The x=1 y=1 second order moment</param>
         /// <param name="m02">The x=0 y=2 second order moment</param>
@@ -393,7 +416,64 @@ namespace MHApi.Imaging
             Moment12 = m12;
         }
 
+        /// <summary>
+        /// Updates the values of all moments stored in the blob
+        /// </summary>
+        /// <param name="m00">The zero's order moment (area)</param>        
+        /// <param name="m10">The x=1 y=0 first order moment</param>
+        /// <param name="m01">The x=0 y=1 first order moment</param>
+        /// <param name="m20">The x=2 y=0 second order moment</param>
+        /// <param name="m11">The x=1 y=1 second order moment</param>
+        /// <param name="m02">The x=0 y=2 second order moment</param>
+        /// <param name="m30">The x=3 y=0 third order moment</param>
+        /// <param name="m03">The x=0 y=3 third order moment</param>
+        public void UpdateBlob(long m00, long m10, long m01, long m20, long m11, long m02, long m30, long m03, long m21, long m12)
+        {
+            Moment00 = m00;
+            Moment10 = m10;
+            Moment01 = m01;
+            Moment20 = m20;
+            Moment11 = m11;
+            Moment02 = m02;
+            Moment30 = m30;
+            Moment03 = m03;
+            Moment21 = m21;
+            Moment12 = m12;
+        }
+
         #endregion
+
+        /// <summary>
+        /// Sets all moment values of the blob back to their default value 0
+        /// </summary>
+        public void ResetBlob()
+        {
+            Moment00 = 0;
+            Moment01 = 0;
+            Moment10 = 0;
+            Moment20 = 0;
+            Moment11 = 0;
+            Moment02 = 0;
+            Moment30 = 0;
+            Moment03 = 0;
+            Moment21 = 0;
+            Moment12 = 0;
+        }
+
+        /// <summary>
+        /// Updates the bounding box without requiring IppiRect
+        /// </summary>
+        /// <param name="x">The top-left x coordinate</param>
+        /// <param name="y">The top-left y coordinate</param>
+        /// <param name="width">The width</param>
+        /// <param name="height">The height</param>
+        public void UpdateBoundingBox(int x, int y, int width, int height)
+        {
+            _boundingBoxUpperLeft.x = x;
+            _boundingBoxUpperLeft.y = y;
+            _boundingBoxLowerRight.x = x + width - 1;
+            _boundingBoxLowerRight.y = y + height - 1;
+        }
 
         /// <summary>
         /// Adds a new pixel to the blob
@@ -462,21 +542,18 @@ namespace MHApi.Imaging
             return blobs;
         }
 
-        #region IComparable
+        #region IComparableT
 
         /// <summary>
         /// Compares to blob objects according to their score - lower scores preceding higher scores
         /// </summary>
         /// <param name="obj"></param>
         /// <returns></returns>
-        public int CompareTo(object obj)
+        public int CompareTo(BlobWithMoments otherBlob)
         {
             //We precede null
-            if (obj == null)
-                return -1;
-            Blob otherBlob = obj as Blob;
             if (otherBlob == null)
-                throw new ArgumentException("Object is not a blob");
+                return -1;
             else
             {
                 return this.Score.CompareTo(otherBlob.Score);

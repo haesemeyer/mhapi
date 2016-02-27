@@ -73,16 +73,22 @@ namespace MHApi.Imaging
 
         #region IDisposable Members
 
-        bool isDisposed;
+        public bool IsDisposed { get; private set; }
 
-        public virtual void Dispose() {
-            if(isDisposed)
-                return;
-            if(background != null)
+        protected virtual void Dispose(bool disposing)
+        {
+            if (background != null)
                 background.Dispose();
-            if(bgImage != null)
+            if (bgImage != null)
                 bgImage.Dispose();
-            isDisposed = true;
+        }
+
+        public void Dispose() {
+            if(IsDisposed)
+                return;
+            Dispose(true);
+            GC.SuppressFinalize(this);
+            IsDisposed = true;
         }
 
         ~BackgroundModel() {

@@ -735,6 +735,7 @@ namespace MHApi.Tracking
             {
                 Dispose(true);
                 IsDisposed = true;
+                GC.SuppressFinalize(this);
             }
         }
 

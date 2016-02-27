@@ -31,6 +31,7 @@ namespace MHApi.Imaging
         /// </summary>
         /// <param name="im">The new image to add to the background</param>
         /// <param name="regionsToExclude">The blobs that should be excluded from the update</param>
+        [Obsolete("Don't use Blob[] version but use BlobWithMoments[] version of method.")]
         public virtual void UpdateBackground(Image8 im, Blob[] regionsToExclude)
         {
             if (regionsToExclude == null)//do a simple update
@@ -69,8 +70,7 @@ namespace MHApi.Imaging
                 {
                     if (b != null)
                     {
-                        IppiROI roi = new IppiROI(b.BoundingBox.x, b.BoundingBox.y, b.BoundingBox.width, b.BoundingBox.height);
-                        ip.ippiSet_8u_C1R(0, _updateMask[roi.TopLeft], _updateMask.Stride, roi.Size);
+                        ip.ippiSet_8u_C1R(0, _updateMask[b.BB_TopLeft], _updateMask.Stride, b.BB_Size);
                     }
                 }
 
@@ -87,15 +87,15 @@ namespace MHApi.Imaging
                 //reset our mask to <update all>, then fill bounding box with 0s
                 ip.ippiSet_8u_C1R(byte.MaxValue, _updateMask.Image, _updateMask.Stride, _updateMask.Size);
                 IppiROI roi = new IppiROI(regionToExclude.BoundingBox.x, regionToExclude.BoundingBox.y, regionToExclude.BoundingBox.width, regionToExclude.BoundingBox.height);
-                ip.ippiSet_8u_C1R(0, _updateMask[roi.TopLeft], _updateMask.Stride, roi.Size);
+                ip.ippiSet_8u_C1R(0, _updateMask[regionToExclude.BB_TopLeft], _updateMask.Stride, regionToExclude.BB_Size);
                 IppHelper.IppCheckCall(cv.ippiAddWeighted_8u32f_C1IMR(im.Image, im.Stride, _updateMask.Image, _updateMask.Stride, background.Image, background.Stride, im.Size, FractionUpdate));
             }
         }
 
-        public override void Dispose()
+        protected override void Dispose(bool disposing)
         {
             _updateMask.Dispose();
-            base.Dispose();
+            base.Dispose(disposing);
         }
     }
 }
