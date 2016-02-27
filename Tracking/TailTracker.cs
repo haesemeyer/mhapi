@@ -457,7 +457,7 @@ namespace MHApi.Tracking
                 if (TailStart.x > TailEnd.x)
                     Up = true;
             }
-            else if (TailStart.y < TailEnd.y)
+            else if (TailStart.y > TailEnd.y)
             {
                 Up = true;
             }
