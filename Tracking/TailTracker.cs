@@ -110,6 +110,12 @@ namespace MHApi.Tracking
         BWImageProcessor.MorphologyMask _strel;
 
         /// <summary>
+        /// If true, indicates that the tail is
+        /// brighter than the background
+        /// </summary>
+        bool _lightOnDark;
+
+        /// <summary>
         /// The size of the closing mask
         /// </summary>
         int _morphSize;
@@ -333,6 +339,23 @@ namespace MHApi.Tracking
         }
 
         /// <summary>
+        /// If true indicates that the tail is
+        /// lighter than the background
+        /// </summary>
+        public bool LightOnDark
+        {
+            get
+            {
+                return _lightOnDark;
+            }
+            set
+            {
+                _lightOnDark = value;
+                _bgValid = false;
+            }
+        }
+
+        /// <summary>
         /// The current background image
         /// </summary>
         public Image8 Background
@@ -537,7 +560,8 @@ namespace MHApi.Tracking
             lock (_regionLock)
             {
                 //CURRENTLY ONLY DOWNWARD FACING TAILS ARE PROPERLY SUPPORTED!!!
-                //Generate background by closing operation - 10 times a second or whenever our coordinates changed
+                //Generate background by morphology operation - 10 times a second or whenever our coordinates changed
+                //in the default case where the tail is darker than the background, using closing operation otherwise opening
                 if (_frameNumber % (_frameRate/10) == 0 || !_bgValid)
                 {
                     if (!_bgValid)
@@ -547,7 +571,10 @@ namespace MHApi.Tracking
                         ip.ippiSet_8u_C1R(0, _foreground.Image, _foreground.Stride, _foreground.Size);
                         ip.ippiSet_8u_C1R(0, _thresholded.Image, _thresholded.Stride, _thresholded.Size);
                     }
-                    BWImageProcessor.Close(image, _background, _calc1, _strel, _trackRegionOuter);
+                    if (_lightOnDark)
+                        BWImageProcessor.Open(image, _background, _calc1, _strel, _trackRegionOuter);
+                    else
+                        BWImageProcessor.Close(image, _background, _calc1, _strel, _trackRegionOuter);
                     _bgValid = true;
                 }
                 //Compute foreground
