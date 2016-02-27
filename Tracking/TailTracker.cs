@@ -447,6 +447,21 @@ namespace MHApi.Tracking
             //on a 360 degree circle around the current point with radius
             //SegmentLength - so set angle step and NAngles to roughly
             //give us this coverage
+
+            bool Up = false;//true indicates both a vertical up and a horizontal left facing tail
+
+            //TODO: Experimental support for horizontal and upward facing tails added - however, left/right might be wrong!
+            if (!TailIsVertical())
+            {
+                System.Diagnostics.Debug.WriteLine("Warning: Horizontal tail implementation is experimental.");
+                if (TailStart.x > TailEnd.x)
+                    Up = true;
+            }
+            else if (TailStart.y < TailEnd.y)
+            {
+                Up = true;
+            }
+
             int circumference = (int)Math.Floor(2 * Math.PI * SegmentLength);
             _angleStep = 2 * Math.PI / circumference;
             
@@ -459,14 +474,26 @@ namespace MHApi.Tracking
 
                 
                 //establish scan angles and offsets:
-                //loop over sweep angles - THE FOLLOWING CODE CURRENTLY ASSUMES THE TAIL IS VERTICAL, FACING DOWN!!!
+                //loop over sweep angles - points are assigned correctly for downward facing tail
+                //use hack for horizontal tail (swap x and y) as well as for upward facing tail (invert both x and y in place)
                 for (int j = 0; j < _scanAngles.Length; j++)
                 {
-                    //facing down is centered in the array
+                    //facing down (up, left, right) is centered in the array
                     _scanAngles[j] = j * _angleStep - Math.PI;
 
                     int offX = (int)Math.Floor(SegmentLength * Math.Sin(_scanAngles[j]));
                     int offY = (int)Math.Floor(SegmentLength * Math.Cos(_scanAngles[j]));
+                    if (Up)//rotate coordinates by 180
+                    {
+                        offX *= -1;
+                        offY *= -1;
+                    }
+                    if(!TailIsVertical())//swap role of x and y coordinates
+                    {
+                        int o = offX;
+                        offX = offY;
+                        offY = o;
+                    }
                     _coordinateOffsets[j] = new IppiPoint(offX, offY);
                 }
             }//release lock
@@ -559,7 +586,7 @@ namespace MHApi.Tracking
         {
             lock (_regionLock)
             {
-                //CURRENTLY ONLY DOWNWARD FACING TAILS ARE PROPERLY SUPPORTED!!!
+                //CURRENTLY ONLY DOWNWARD FACING TAILS ARE PROPERLY VERIFIED!!!
                 //Generate background by morphology operation - 10 times a second or whenever our coordinates changed
                 //in the default case where the tail is darker than the background, using closing operation otherwise opening
                 if (_frameNumber % (_frameRate/10) == 0 || !_bgValid)
