@@ -34,6 +34,12 @@ namespace MHApi.Imaging
         /// <param name="height">The height of each image</param>
         public AccumulationBuffer16(uint accumulationWindow, int width, int height)
         {
+            if (accumulationWindow < 1)
+                throw new ArgumentOutOfRangeException(nameof(accumulationWindow), "Has to be larger than 0");
+            if (width < 1)
+                throw new ArgumentOutOfRangeException(nameof(width), "Has to be larger than 0");
+            if(height<1)
+                throw new ArgumentOutOfRangeException(nameof(height), "Has to be larger than 0");
             _images = new Image16[accumulationWindow];
             for(int i = 0; i < accumulationWindow; i++)
             {
