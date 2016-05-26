@@ -84,6 +84,21 @@ namespace MHApi.Imaging
         }
 
         /// <summary>
+        /// Sets the accumulated image and all buffer
+        /// contents to 0
+        /// </summary>
+        public void Reset()
+        {
+            if (_images == null)
+                return;
+            for (int i = 0; i < _images.Length; i++)
+            {
+                ip.ippiSet_16u_C1R(0, _images[i].Image, _images[i].Stride, _images[i].Size);
+            }
+            ip.ippiSet_16u_C1R(0, _accumulated.Image, _accumulated.Stride, _accumulated.Size);
+        }
+
+        /// <summary>
         /// Free resources
         /// </summary>
         public void Dispose()
