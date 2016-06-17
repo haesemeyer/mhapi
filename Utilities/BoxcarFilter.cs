@@ -67,6 +67,17 @@ namespace MHApi.Utilities
             }
         }
 
+        /// <summary>
+        /// The size/length of the boxcar filter
+        /// </summary>
+        public int FilterSize
+        {
+            get
+            {
+                return _bcFilterSize;
+            }
+        }
+
         #region Methods
 
         /// <summary>
