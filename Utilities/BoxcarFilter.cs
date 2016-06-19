@@ -98,6 +98,11 @@ namespace MHApi.Utilities
         public void Reset()
         {
             sp.ippsZero_32f(_bcDelay, _bcFilterSize);
+            //re-initialize state structure
+            fixed (IppsFIRState_32f** ppState = &_filterState)
+            {
+                sp.ippsFIRInit_32f(ppState, _bcTaps, _bcFilterSize, _bcDelay, _filterStateMem);
+            }
         }
 
         #endregion
