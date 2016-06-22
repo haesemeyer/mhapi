@@ -86,6 +86,7 @@ namespace MHApi.Utilities
                     var t = _timings[name];
                     t.Iterations++;
                     t.Elapsed += end - _startTicks[name];
+                    _timings[name] = t;
                 }
                 else
                 {
