@@ -117,6 +117,18 @@ namespace MHApi.Utilities
         }
 
         /// <summary>
+        /// Report all per iteration averaged
+        /// performance measures
+        /// </summary>
+        public static void ReportAllAverageMilliseconds()
+        {
+            foreach(string k in _timings.Keys)
+            {
+                ReportAverageMilliseconds(k);
+            }
+        }
+
+        /// <summary>
         /// Writes the total number of elapsed seconds
         /// to the debug console
         /// </summary>
