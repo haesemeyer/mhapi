@@ -131,5 +131,20 @@ namespace MHApi.Utilities
                 Debug.WriteLine("No measurement with this name exists.");
         }
 
+        /// <summary>
+        /// Resets the named measurement
+        /// </summary>
+        /// <param name="name">The name of the measurement</param>
+        [Conditional("DEBUG")]
+        public static void Reset(string name)
+        {
+            if (_timings.ContainsKey(name))
+            {
+                _timings[name] = new TimeData();
+            }
+            else
+                Debug.WriteLine("No measurement with this name exists.");
+        }
+
     }
 }
