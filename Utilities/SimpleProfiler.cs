@@ -96,7 +96,7 @@ namespace MHApi.Utilities
                 }
             }
             else
-                Debug.WriteLine("Can't end measurement that hasn't been started. Ignored call.");
+                Debug.WriteLine("Can't end measurement that hasn't been started. Ignored call.", name);
         }
 
         /// <summary>
@@ -112,7 +112,7 @@ namespace MHApi.Utilities
                 Debug.WriteLine("Each iteration of {0} took {1} ms.", name, _timings[name].AverageInMilliseconds);
             }
             else
-                Debug.WriteLine("No measurement with this name exists.");
+                Debug.WriteLine("No measurement with this name exists.", name);
         }
 
         /// <summary>
@@ -128,7 +128,7 @@ namespace MHApi.Utilities
                 Debug.WriteLine("Total time taken by {0} was {1} seconds.", name, _timings[name].TotalInSeconds);
             }
             else
-                Debug.WriteLine("No measurement with this name exists.");
+                Debug.WriteLine("No measurement with this name exists.", name);
         }
 
         /// <summary>
@@ -143,7 +143,7 @@ namespace MHApi.Utilities
                 _timings[name] = new TimeData();
             }
             else
-                Debug.WriteLine("No measurement with this name exists.");
+                Debug.WriteLine("No measurement with this name exists.", name);
         }
 
     }
