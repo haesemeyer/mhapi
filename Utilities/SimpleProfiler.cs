@@ -60,6 +60,8 @@ namespace MHApi.Utilities
         /// </summary>
         private static Dictionary<string, long> _startTicks = new Dictionary<string, long>();
 
+        private static object _dictLocker = new object();
+
         /// <summary>
         /// Starts a new named measurement
         /// </summary>
@@ -67,7 +69,10 @@ namespace MHApi.Utilities
         [Conditional("DEBUG")]
         public static void StartNextMeasurement(string name)
         {
-            _startTicks[name] = Stopwatch.GetTimestamp();
+            lock (_dictLocker)
+            {
+                _startTicks[name] = Stopwatch.GetTimestamp();
+            }
         }
 
         /// <summary>
@@ -79,25 +84,28 @@ namespace MHApi.Utilities
         public static void EndNextMeasurement(string name)
         {
             var end = Stopwatch.GetTimestamp();
-            if (_startTicks.ContainsKey(name))
+            lock (_dictLocker)
             {
-                if (_timings.ContainsKey(name))
+                if (_startTicks.ContainsKey(name))
                 {
-                    var t = _timings[name];
-                    t.Iterations++;
-                    t.Elapsed += end - _startTicks[name];
-                    _timings[name] = t;
+                    if (_timings.ContainsKey(name))
+                    {
+                        var t = _timings[name];
+                        t.Iterations++;
+                        t.Elapsed += end - _startTicks[name];
+                        _timings[name] = t;
+                    }
+                    else
+                    {
+                        var t = new TimeData();
+                        t.Iterations = 1;
+                        t.Elapsed = end - _startTicks[name];
+                        _timings[name] = t;
+                    }
                 }
                 else
-                {
-                    var t = new TimeData();
-                    t.Iterations = 1;
-                    t.Elapsed = end - _startTicks[name];
-                    _timings[name] = t;
-                }
+                    Debug.WriteLine("Can't end measurement that hasn't been started. Ignored call.", name);
             }
-            else
-                Debug.WriteLine("Can't end measurement that hasn't been started. Ignored call.", name);
         }
 
         /// <summary>
@@ -108,12 +116,15 @@ namespace MHApi.Utilities
         [Conditional("DEBUG")]
         public static void ReportAverageMilliseconds(string name)
         {
-            if (_timings.ContainsKey(name))
+            lock (_dictLocker)
             {
-                Debug.WriteLine("Each iteration of {0} took {1} ms.", name, _timings[name].AverageInMilliseconds);
+                if (_timings.ContainsKey(name))
+                {
+                    Debug.WriteLine("Each iteration of {0} took {1} ms.", name, _timings[name].AverageInMilliseconds);
+                }
+                else
+                    Debug.WriteLine("No measurement with this name exists.", name);
             }
-            else
-                Debug.WriteLine("No measurement with this name exists.", name);
         }
 
         /// <summary>
@@ -122,9 +133,12 @@ namespace MHApi.Utilities
         /// </summary>
         public static void ReportAllAverageMilliseconds()
         {
-            foreach(string k in _timings.Keys)
+            lock (_dictLocker)
             {
-                ReportAverageMilliseconds(k);
+                foreach (string k in _timings.Keys)
+                {
+                    ReportAverageMilliseconds(k);
+                }
             }
         }
 
@@ -136,12 +150,15 @@ namespace MHApi.Utilities
         [Conditional("DEBUG")]
         public static void ReportTotalSeconds(string name)
         {
-            if (_timings.ContainsKey(name))
+            lock (_dictLocker)
             {
-                Debug.WriteLine("Total time taken by {0} was {1} seconds.", name, _timings[name].TotalInSeconds);
+                if (_timings.ContainsKey(name))
+                {
+                    Debug.WriteLine("Total time taken by {0} was {1} seconds.", name, _timings[name].TotalInSeconds);
+                }
+                else
+                    Debug.WriteLine("No measurement with this name exists.", name);
             }
-            else
-                Debug.WriteLine("No measurement with this name exists.", name);
         }
 
         /// <summary>
@@ -151,12 +168,15 @@ namespace MHApi.Utilities
         [Conditional("DEBUG")]
         public static void Reset(string name)
         {
-            if (_timings.ContainsKey(name))
+            lock (_dictLocker)
             {
-                _timings[name] = new TimeData();
+                if (_timings.ContainsKey(name))
+                {
+                    _timings[name] = new TimeData();
+                }
+                else
+                    Debug.WriteLine("No measurement with this name exists.", name);
             }
-            else
-                Debug.WriteLine("No measurement with this name exists.", name);
         }
 
     }
