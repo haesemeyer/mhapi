@@ -264,14 +264,17 @@ namespace MHApi.Tracking
                     throw new ArgumentOutOfRangeException("MorphSize");
                 //If the size changed, we need to recreate our
                 //structuring element and redefine track regions
-                if (value != _morphSize)
+                lock (_regionLock)
                 {
-                    if (_strel != null)
-                        _strel.Dispose();
-                    _strel = BWImageProcessor.GenerateDiskMask(value);
-                    DefineTrackRegions();
+                    if (value != _morphSize)
+                    {
+                        if (_strel != null)
+                            _strel.Dispose();
+                        _strel = BWImageProcessor.GenerateDiskMask(value);
+                        DefineTrackRegions();
+                    }
+                    _morphSize = value;
                 }
-                _morphSize = value;
             }
         }
 
