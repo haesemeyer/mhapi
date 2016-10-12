@@ -612,7 +612,7 @@ namespace MHApi.Tracking
                 //Threshold
                 BWImageProcessor.Im2Bw(_foreground, _thresholded, _trackRegionInner, _threshold);
                 //Fill small holes
-                BWImageProcessor.Close3x3(_thresholded, _thresholded, _calc1, _trackRegionInner);
+                BWImageProcessor.Close3x3(_thresholded, _thresholded, _calc1, _trackRegionOuter);
             }
             //Tracking concept: We track the angle of each segment end (TailStart+SegmentLength:TailEnd)
             //as the angular displacement from the previous segment end
