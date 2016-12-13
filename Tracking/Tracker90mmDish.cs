@@ -101,6 +101,12 @@ namespace MHApi.Tracking
         int _framesInitialBackground;
 
         /// <summary>
+        /// Determines every how many frames the background
+        /// will be updated
+        /// </summary>
+        int _bgUpdateEvery;
+
+        /// <summary>
         /// The fish extracted from the previous frame
         /// or null, if no trustworthy fish was found
         /// </summary>
@@ -328,6 +334,23 @@ namespace MHApi.Tracking
         }
 
         /// <summary>
+        /// Background will only be updated every BGUpdateEvery frames
+        /// </summary>
+        public int BGUpdateEvery
+        {
+            get
+            {
+                return _bgUpdateEvery;
+            }
+            set
+            {
+                if (value < 1)
+                    throw new ArgumentOutOfRangeException(nameof(BGUpdateEvery), "Has to be 1 or larger");
+                _bgUpdateEvery = value;
+            }
+        }
+
+        /// <summary>
         /// The current frame
         /// </summary>
         public int Frame
@@ -405,6 +428,7 @@ namespace MHApi.Tracking
             //a stationary object will have dissappeared into the background (at 63% level)
             FramesInBackground = (int)((30 * 250));
             FramesInitialBackground = 2 * 30 * 250;
+            BGUpdateEvery = 2;
         }
 
         #endregion
@@ -467,8 +491,8 @@ namespace MHApi.Tracking
             }
             else
             {
-                //update background every 2nd frame only
-                if (_frame % 2 == 1)
+                //update background every nth frame only
+                if (_frame % BGUpdateEvery == 0)
                 {
                     if (currentFish == null)
                         _bgModel.UpdateBackground(image);
